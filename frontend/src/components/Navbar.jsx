@@ -6,6 +6,7 @@ export default function Navbar() {
     { to: '/', label: 'Home' },
     { to: '/problems', label: 'Problems' },
     { to: '/dashboard', label: 'Dashboard' },
+    { to: '/analytics', label: '📊 Analytics' },
   ]
 
   return (

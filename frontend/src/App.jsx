@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import Problems from './pages/Problems'
 import ProblemDetail from './pages/ProblemDetail'
 import Dashboard from './pages/Dashboard'
+import Analytics from './pages/Analytics'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -20,6 +21,7 @@ function AppContent() {
         <Route path="/problems" element={<Problems />} />
         <Route path="/problems/:id" element={<ProblemDetail />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/analytics" element={<Analytics />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
       </Routes>
