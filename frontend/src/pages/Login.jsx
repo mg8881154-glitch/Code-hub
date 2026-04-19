@@ -23,8 +23,12 @@ export default function Login() {
     <div className="pt-14 min-h-screen flex items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-10 h-10 bg-cyan-400 rounded-xl flex items-center justify-center text-black font-black text-lg mx-auto mb-3">C</div>
-          <h1 className="text-2xl font-bold text-white">Welcome back</h1>
+          <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-black font-black text-sm mx-auto mb-3 shadow-lg shadow-cyan-400/30">
+            {'</>'}
+          </div>
+          <h1 className="text-2xl font-bold text-white">
+            <span className="text-white">Code</span><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Hub</span>
+          </h1>
           <p className="text-gray-400 text-sm mt-1">Login to continue your streak</p>
         </div>
 

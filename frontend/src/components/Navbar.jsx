@@ -12,9 +12,13 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0d1117]/90 backdrop-blur border-b border-gray-800">
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-cyan-400 rounded flex items-center justify-center text-black font-black text-sm">C</div>
-          <span className="text-white font-bold text-lg">CodeHub</span>
+        <Link to="/" className="flex items-center gap-2 group">
+          <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center text-black font-black text-sm shadow-lg shadow-cyan-400/30 group-hover:shadow-cyan-400/50 transition">
+            {'</>'}
+          </div>
+          <span className="font-black text-xl tracking-tight">
+            <span className="text-white">Code</span><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Hub</span>
+          </span>
         </Link>
 
         {/* Links */}
