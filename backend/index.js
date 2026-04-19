@@ -84,6 +84,20 @@ app.post("/ai/chat", async (req, res) => {
   }
 });
 
+// Daily Challenge route
+app.get("/daily-challenge", async (req, res) => {
+  try {
+    const count = await Problem.countDocuments();
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const index = seed % count;
+    const problem = await Problem.findOne().skip(index);
+    res.json(problem);
+  } catch (err) {
+    res.status(500).json({ error: "Could not fetch daily challenge" });
+  }
+});
+
 // Get all problems
 app.get("/problems", async (req, res) => {
   try {
