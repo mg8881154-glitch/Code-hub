@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import AIChatbot from '../components/AIChatbot'
+
+const USER_ID = "kinetic_dev"
 
 const starterCode = {
   'C++': `#include <bits/stdc++.h>\nusing namespace std;\n\nclass Solution {\npublic:\n    // Write your solution here\n    \n};`,
@@ -23,13 +26,47 @@ export default function ProblemDetail() {
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('description')
+  const [bookmarked, setBookmarked] = useState(false)
+  const [note, setNote] = useState('')
+  const [noteSaved, setNoteSaved] = useState(false)
+  const [newBadges, setNewBadges] = useState([])
+  const [solved, setSolved] = useState(false)
 
   useEffect(() => {
     fetch('http://localhost:5000/problems')
       .then(r => r.json())
-      .then(data => setProblem(data.find(p => p._id === id)))
+      .then(data => {
+        const found = data.find(p => p._id === id)
+        setProblem(found)
+        if (found) {
+          // Load bookmark and note
+          axios.get(`http://localhost:5000/user/${USER_ID}/bookmarks`)
+            .then(r => setBookmarked(r.data.some(b => b._id === id || b === id)))
+          axios.get(`http://localhost:5000/user/${USER_ID}/note/${id}`)
+            .then(r => setNote(r.data.note || ''))
+        }
+      })
       .finally(() => setLoading(false))
   }, [id])
+
+  const toggleBookmark = async () => {
+    const res = await axios.post(`http://localhost:5000/user/${USER_ID}/bookmark/${id}`)
+    setBookmarked(res.data.bookmarks.includes(id))
+    if (res.data.newBadges?.length) setNewBadges(res.data.newBadges)
+  }
+
+  const saveNote = async () => {
+    await axios.post(`http://localhost:5000/user/${USER_ID}/note/${id}`, { note })
+    setNoteSaved(true)
+    setTimeout(() => setNoteSaved(false), 2000)
+  }
+
+  const handleSubmit = async () => {
+    setOutput('🎉 Accepted! Runtime: 12ms | Memory: 8.2MB')
+    const res = await axios.post(`http://localhost:5000/user/${USER_ID}/solve/${id}`)
+    setSolved(true)
+    if (res.data.newBadges?.length) setNewBadges(res.data.newBadges)
+  }
 
   const handleLang = (l) => { setLang(l); setCode(starterCode[l]) }
 
@@ -50,14 +87,20 @@ export default function ProblemDetail() {
       <div className="w-2/5 border-r border-gray-800 flex flex-col overflow-hidden">
         {/* Tabs */}
         <div className="flex border-b border-gray-800 bg-[#161b22]">
-          {['description', 'approach', 'complexity'].map(tab => (
+          {['description', 'approach', 'complexity', 'notes'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-3 text-xs font-semibold capitalize transition ${
                 activeTab === tab ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-400 hover:text-white'
               }`}>
-              {tab === 'complexity' ? '⏱ Complexity' : tab === 'approach' ? '💡 Approach' : '📄 Description'}
+              {tab === 'complexity' ? '⏱ Complexity' : tab === 'approach' ? '💡 Approach' : tab === 'notes' ? '📝 Notes' : '📄 Description'}
             </button>
           ))}
+          {/* Bookmark button */}
+          <button onClick={toggleBookmark}
+            className={`ml-auto px-4 py-3 text-lg transition ${bookmarked ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}`}
+            title={bookmarked ? 'Remove bookmark' : 'Bookmark'}>
+            {bookmarked ? '🔖' : '🔖'}
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
@@ -172,6 +215,25 @@ export default function ProblemDetail() {
               </div>
             </div>
           )}
+          {/* Notes Tab */}
+          {activeTab === 'notes' && (
+            <div>
+              <h2 className="text-white font-bold mb-3">📝 My Notes</h2>
+              <p className="text-gray-400 text-xs mb-3">Write your approach, observations or reminders for this problem.</p>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="Write your notes here..."
+                className="w-full h-48 bg-[#0d1117] border border-gray-700 rounded-xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 resize-none"
+              />
+              <button onClick={saveNote}
+                className={`mt-3 w-full py-2 rounded-xl text-sm font-semibold transition ${
+                  noteSaved ? 'bg-green-400 text-black' : 'bg-cyan-400 text-black hover:bg-cyan-300'
+                }`}>
+                {noteSaved ? '✅ Saved!' : '💾 Save Note'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -194,9 +256,9 @@ export default function ProblemDetail() {
               className="px-4 py-1.5 text-xs font-semibold border border-gray-600 text-white rounded-lg hover:border-gray-400 transition">
               ▶ Run
             </button>
-            <button onClick={() => setOutput('🎉 Accepted! Runtime: 12ms (beats 94%) | Memory: 8.2MB')}
-              className="px-4 py-1.5 text-xs font-semibold bg-cyan-400 text-black rounded-lg hover:bg-cyan-300 transition">
-              Submit
+            <button onClick={handleSubmit}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${solved ? 'bg-green-400 text-black' : 'bg-cyan-400 text-black hover:bg-cyan-300'}`}>
+              {solved ? '✅ Solved!' : 'Submit'}
             </button>
           </div>
         </div>
@@ -219,6 +281,23 @@ export default function ProblemDetail() {
         )}
       </div>
       <AIChatbot problemTitle={problem?.title} problemDescription={problem?.description} />
+
+      {/* Badge Notification */}
+      {newBadges.length > 0 && (
+        <div className="fixed top-20 right-6 z-50 space-y-3">
+          {newBadges.map((b, i) => (
+            <div key={i} className="bg-gradient-to-r from-yellow-400/20 to-orange-400/20 border border-yellow-400/40 rounded-2xl px-5 py-4 shadow-2xl animate-bounce flex items-center gap-3 max-w-xs">
+              <span className="text-3xl">{b.icon}</span>
+              <div>
+                <p className="text-yellow-400 font-black text-sm">🏅 Badge Earned!</p>
+                <p className="text-white font-semibold text-sm">{b.name}</p>
+                <p className="text-gray-400 text-xs">{b.description}</p>
+              </div>
+              <button onClick={() => setNewBadges([])} className="ml-auto text-gray-500 hover:text-white">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

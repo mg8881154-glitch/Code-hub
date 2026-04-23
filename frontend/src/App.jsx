@@ -6,6 +6,8 @@ import Problems from './pages/Problems'
 import ProblemDetail from './pages/ProblemDetail'
 import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
+import Badges from './pages/Badges'
+import Bookmarks from './pages/Bookmarks'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -22,6 +24,8 @@ function AppContent() {
         <Route path="/problems/:id" element={<ProblemDetail />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/badges" element={<Badges />} />
+        <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
       </Routes>

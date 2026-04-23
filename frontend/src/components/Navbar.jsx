@@ -7,6 +7,8 @@ export default function Navbar() {
     { to: '/problems', label: 'Problems' },
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/analytics', label: '📊 Analytics' },
+    { to: '/bookmarks', label: '🔖 Bookmarks' },
+    { to: '/badges', label: '🏅 Badges' },
   ]
 
   return (
