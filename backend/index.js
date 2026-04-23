@@ -13,30 +13,94 @@ mongoose.connect(process.env.MONGO_URI)
 .catch(err => console.log(err));
 
 const User = require("./models/User");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+
+// ── JWT Middleware ──
+const protect = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "No token, unauthorized" });
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+const adminOnly = (req, res, next) => {
+  if (req.user?.role !== "admin") return res.status(403).json({ message: "Admin access required" });
+  next();
+};
+
+const generateToken = (user) => jwt.sign(
+  { id: user._id, email: user.email, role: user.role, username: user.username },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
 // Test route
-app.get("/", (req, res) => {
-  res.send("Backend running");
-});
+app.get("/", (req, res) => res.json({ message: "CodeHub API running ✅" }));
 
+// ── Auth Routes ──
 app.post("/signup", async (req, res) => {
   try {
-    const user = new User(req.body);
+    const { username, email, password, role } = req.body;
+    if (!username || !email || !password)
+      return res.status(400).json({ message: "All fields required" });
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).json({ message: "Email already registered" });
+    const user = new User({ username, email, password, role: role || "user" });
     await user.save();
-    res.send("User created");
+    const token = generateToken(user);
+    res.status(201).json({
+      token,
+      user: { id: user._id, username: user.username, email: user.email, role: user.role }
+    });
   } catch (err) {
-    res.status(500).send("Error creating user");
+    res.status(500).json({ message: "Signup failed", error: err.message });
   }
 });
 
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email, password });
-    if (!user) return res.status(401).send("Invalid email or password");
-    res.send("Login successful");
+    if (!email || !password)
+      return res.status(400).json({ message: "Email and password required" });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ message: "Invalid email or password" });
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
+    const token = generateToken(user);
+    res.json({
+      token,
+      user: { id: user._id, username: user.username, email: user.email, role: user.role }
+    });
   } catch (err) {
-    res.status(500).send("Error logging in");
+    res.status(500).json({ message: "Login failed", error: err.message });
+  }
+});
+
+app.post("/logout", (req, res) => {
+  res.json({ message: "Logged out successfully" });
+});
+
+app.get("/me", protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching user" });
+  }
+});
+
+// Admin only route
+app.get("/admin/users", protect, adminOnly, async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching users" });
   }
 });
 
@@ -230,7 +294,38 @@ app.post("/ai/chat", async (req, res) => {
   }
 });
 
-// Daily Challenge route
+const Message = require("./models/Message");
+
+// ── Discussion / Chat Routes ──
+app.post("/api/message", async (req, res) => {
+  try {
+    const { userId, username, problemId, text } = req.body;
+    if (!text?.trim()) return res.status(400).json({ message: "Message cannot be empty" });
+    const message = await Message.create({ userId, username, problemId, text });
+    res.status(201).json(message);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to send message" });
+  }
+});
+
+app.get("/api/message/:problemId", async (req, res) => {
+  try {
+    const messages = await Message.find({ problemId: req.params.problemId })
+      .sort({ createdAt: 1 });
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch messages" });
+  }
+});
+
+app.delete("/api/message/:messageId", async (req, res) => {
+  try {
+    await Message.findByIdAndDelete(req.params.messageId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete message" });
+  }
+});
 app.get("/daily-challenge", async (req, res) => {
   try {
     const count = await Problem.countDocuments();

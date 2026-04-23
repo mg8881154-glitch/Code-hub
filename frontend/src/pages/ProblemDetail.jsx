@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import AIChatbot from '../components/AIChatbot'
+import Discussion from '../components/Discussion'
 
 const USER_ID = "kinetic_dev"
 
@@ -87,12 +88,12 @@ export default function ProblemDetail() {
       <div className="w-2/5 border-r border-gray-800 flex flex-col overflow-hidden">
         {/* Tabs */}
         <div className="flex border-b border-gray-800 bg-[#161b22]">
-          {['description', 'approach', 'complexity', 'notes'].map(tab => (
+          {['description', 'approach', 'complexity', 'notes', 'discussion'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-3 text-xs font-semibold capitalize transition ${
                 activeTab === tab ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-400 hover:text-white'
               }`}>
-              {tab === 'complexity' ? '⏱ Complexity' : tab === 'approach' ? '💡 Approach' : tab === 'notes' ? '📝 Notes' : '📄 Description'}
+              {tab === 'complexity' ? '⏱ Complexity' : tab === 'approach' ? '💡 Approach' : tab === 'notes' ? '📝 Notes' : tab === 'discussion' ? '💬 Discussion' : '📄 Description'}
             </button>
           ))}
           {/* Bookmark button */}
@@ -234,7 +235,16 @@ export default function ProblemDetail() {
               </button>
             </div>
           )}
+          {/* Discussion Tab */}
+          {activeTab === 'discussion' && (
+            <Discussion problemId={id} />
+          )}
+
         </div>
+      </div>
+
+      {/* Discussion Section */}
+      <div className="w-2/5 border-r border-gray-800 overflow-y-auto px-5 pb-5" style={{display: activeTab === 'discussion' ? 'block' : 'none'}}>
       </div>
 
       {/* Right Panel - Editor */}
