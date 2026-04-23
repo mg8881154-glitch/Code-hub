@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { useTheme } from '../context/ThemeContext'
 
 const codeLines = [
   { text: 'function twoSum(nums, target) {', color: 'text-cyan-400' },
@@ -57,6 +58,7 @@ const companies = [
 ]
 
 export default function Home() {
+  const { dark } = useTheme()
   const [visibleLines, setVisibleLines] = useState(0)
   const [typed, setTyped] = useState('')
   const fullText = 'Practice Coding, Crack Interviews'
@@ -80,7 +82,7 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="pt-14 bg-[#0d1117]">
+    <div className={`pt-14 ${dark ? 'bg-[#0d1117]' : 'bg-[#f0f4f8]'}`}>
 
       {/* ── Hero ── */}
       <section className="min-h-[92vh] flex items-center relative overflow-hidden">
