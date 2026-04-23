@@ -96,32 +96,42 @@ export default function Home() {
               🚀 AI-Powered DSA Learning Platform
             </span>
 
-            <h1 className="text-5xl md:text-6xl font-black text-white leading-tight mb-6 min-h-[150px]">
+            <h1 className={`text-5xl md:text-6xl font-black leading-tight mb-6 min-h-[150px] ${dark ? 'text-white' : 'text-gray-900'}`}>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500">
                 {typed}
               </span>
               <span className="animate-pulse text-cyan-400">|</span>
             </h1>
 
-            <p className="text-gray-400 text-lg mb-8 leading-relaxed max-w-lg">
+            {/* Fix 1: Subtitle — dark gray in light mode */}
+            <p className={`text-lg mb-8 leading-relaxed max-w-lg ${dark ? 'text-gray-400' : 'text-gray-700'}`}>
               Master Data Structures & Algorithms with AI-guided learning, real interview problems, and instant feedback.
             </p>
 
+            {/* Fix 2: View Dashboard button — dark text + border in light mode */}
             <div className="flex items-center gap-4 mb-10">
               <Link to="/problems"
                 className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-8 py-3.5 rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-400/25 text-sm">
                 Start Solving →
               </Link>
               <Link to="/dashboard"
-                className="border border-gray-700 text-white font-medium px-8 py-3.5 rounded-xl hover:border-cyan-400/50 hover:text-cyan-400 transition text-sm">
+                className={`font-medium px-8 py-3.5 rounded-xl transition text-sm border ${
+                  dark
+                    ? 'border-gray-700 text-white hover:border-cyan-400/50 hover:text-cyan-400'
+                    : 'border-gray-400 text-gray-800 hover:border-cyan-500 hover:text-cyan-600 bg-white/60'
+                }`}>
                 View Dashboard
               </Link>
             </div>
 
-            {/* Topic chips */}
+            {/* Fix 3: Topic chips — light bg + dark text in light mode */}
             <div className="flex flex-wrap gap-2">
               {topics.map(t => (
-                <span key={t.label} className="flex items-center gap-1.5 text-xs text-gray-400 bg-[#161b22] border border-gray-800 px-3 py-1.5 rounded-full hover:border-cyan-400/40 hover:text-cyan-400 transition cursor-pointer">
+                <span key={t.label} className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition cursor-pointer hover:border-cyan-400/60 hover:text-cyan-500 ${
+                  dark
+                    ? 'text-gray-400 bg-[#161b22] border-gray-800'
+                    : 'text-gray-600 bg-white border-gray-300 hover:bg-gray-50'
+                }`}>
                   {t.icon} {t.label}
                 </span>
               ))}
@@ -167,9 +177,9 @@ export default function Home() {
       </section>
 
       {/* ── Trusted by companies ── */}
-      <section className="border-y border-gray-800/60 py-8 bg-[#0d1117]">
+      <section className={`border-y py-8 ${dark ? 'border-gray-800/60 bg-[#0d1117]' : 'border-gray-200 bg-white'}`}>
         <div className="max-w-5xl mx-auto px-6">
-          <p className="text-center text-gray-500 text-xs uppercase tracking-widest mb-6">Problems asked at top companies</p>
+          <p className={`text-center text-xs uppercase tracking-widest mb-6 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>Problems asked at top companies</p>
           <div className="flex flex-wrap justify-center gap-8">
             {companies.map(c => (
               <span key={c.name} className={`text-lg font-black ${c.color} opacity-60 hover:opacity-100 transition`}>{c.name}</span>
