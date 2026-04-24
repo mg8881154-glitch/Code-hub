@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from 'axios'
 import Editor from '@monaco-editor/react'
+import ReactMarkdown from 'react-markdown'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
 // ── Starter Code ──
@@ -212,6 +213,7 @@ export default function Interview() {
   const [code, setCode] = useState(STARTER['C++'])
   const [codeApproved, setCodeApproved] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const [showEndConfirm, setShowEndConfirm] = useState(false)
   const bottomRef = useRef(null)
   const recognitionRef = useRef(null)
 
@@ -322,6 +324,28 @@ export default function Interview() {
 
   return (
     <div className="pt-14 h-screen bg-[#0d1117] flex flex-col overflow-hidden">
+      {/* Fix 4: Confirmation Modal */}
+      {showEndConfirm && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-[#161b22] border border-gray-700 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="text-4xl text-center mb-4">⚠️</div>
+            <h3 className="text-white font-bold text-lg text-center mb-2">End Interview?</h3>
+            <p className="text-gray-400 text-sm text-center mb-6">
+              Are you sure you want to end the session? Your feedback report will be generated.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowEndConfirm(false)}
+                className="flex-1 border border-gray-700 text-gray-300 font-semibold py-2.5 rounded-xl hover:border-gray-500 hover:text-white transition text-sm">
+                Continue Interview
+              </button>
+              <button onClick={() => { setShowEndConfirm(false); endInterview() }}
+                className="flex-1 bg-red-500 text-white font-bold py-2.5 rounded-xl hover:bg-red-400 transition text-sm">
+                End & Get Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-2.5 bg-[#161b22] border-b border-gray-800 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -342,7 +366,7 @@ export default function Interview() {
             </span>
           )}
           {started && (
-            <button onClick={endInterview}
+            <button onClick={() => setShowEndConfirm(true)}
               className="text-xs border border-red-400/30 text-red-400 px-4 py-1.5 rounded-lg hover:bg-red-400/10 transition">
               End Interview
             </button>
@@ -394,14 +418,31 @@ export default function Interview() {
                   }`}>
                     {msg.role === 'user' ? '👤' : '👨‍💼'}
                   </div>
+                  {/* Fix 2: Markdown rendering in chat bubbles */}
                   <div className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                     msg.role === 'user'
                       ? 'bg-gradient-to-br from-cyan-400/20 to-blue-500/20 border border-cyan-400/20 text-white rounded-tr-sm'
                       : 'bg-[#0d1117] border border-gray-800 text-gray-200 rounded-tl-sm'
                   }`}>
-                    {msg.content}
+                    {msg.role === 'assistant' ? (
+                      <ReactMarkdown
+                        components={{
+                          code: ({ inline, children }) => inline
+                            ? <code className="bg-gray-800 text-cyan-300 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
+                            : <pre className="bg-gray-900 border border-gray-700 rounded-lg p-3 mt-2 overflow-x-auto"><code className="text-green-300 text-xs font-mono">{children}</code></pre>,
+                          strong: ({ children }) => <strong className="text-white font-bold">{children}</strong>,
+                          p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mt-1">{children}</ul>,
+                          li: ({ children }) => <li className="text-gray-300">{children}</li>,
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      msg.content
+                    )}
                     {msg.role === 'assistant' && (
-                      <button onClick={() => speak(msg.content)} className="block mt-1 text-xs text-gray-600 hover:text-cyan-400">🔊</button>
+                      <button onClick={() => speak(msg.content)} className="block mt-1.5 text-xs text-gray-600 hover:text-cyan-400 transition">🔊 Replay</button>
                     )}
                   </div>
                 </div>
@@ -429,10 +470,16 @@ export default function Interview() {
 
             {/* Input */}
             <div className="px-3 py-3 border-t border-gray-800 flex gap-2 items-end">
-              <button onClick={toggleListen}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition text-sm ${
-                  listening ? 'bg-red-400 text-white animate-pulse' : 'bg-[#0d1117] border border-gray-700 text-gray-400 hover:text-white'
-                }`}>🎤</button>
+              {/* Fix 3: Pulsing green Live indicator when listening */}
+              <div className="relative flex-shrink-0">
+                <button onClick={toggleListen}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition text-sm ${
+                    listening ? 'bg-red-400 text-white' : 'bg-[#0d1117] border border-gray-700 text-gray-400 hover:text-white'
+                  }`}>🎤</button>
+                {listening && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-[#0d1117] animate-pulse" />
+                )}
+              </div>
               <textarea value={input} onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
                 placeholder={listening ? '🎤 Listening...' : 'Type your answer...'}
@@ -476,13 +523,17 @@ export default function Interview() {
 
             {/* Monaco Editor */}
             <div className="flex-1 relative">
+              {/* Fix 1: Sidebar notification instead of blocking overlay */}
               {!codeApproved && (
-                <div className="absolute inset-0 bg-[#0d1117]/80 backdrop-blur-sm z-10 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-4xl mb-3">🔒</div>
-                    <p className="text-white font-semibold">Editor Locked</p>
-                    <p className="text-gray-400 text-sm mt-1">Explain your approach to Alex first</p>
-                  </div>
+                <div className="absolute top-3 right-3 z-10 bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-2 shadow-lg backdrop-blur-sm">
+                  <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse flex-shrink-0" />
+                  Explain approach to Alex first
+                </div>
+              )}
+              {codeApproved && (
+                <div className="absolute top-3 right-3 z-10 bg-green-400/10 border border-green-400/30 text-green-400 text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-2 shadow-lg">
+                  <span className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />
+                  Approach approved — code away!
                 </div>
               )}
               <Editor
