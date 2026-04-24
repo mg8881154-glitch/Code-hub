@@ -15,6 +15,7 @@ export default function Navbar() {
     { to: '/analytics', label: '📊 Analytics' },
     { to: '/bookmarks', label: '🔖 Bookmarks' },
     { to: '/badges', label: '🏅 Badges' },
+    { to: '/interview', label: '🎙 Interview' },
   ]
 
   const handleLogout = () => { logout(); navigate('/') }
@@ -30,7 +31,7 @@ export default function Navbar() {
             {'</>'}
           </div>
           <span className="font-black text-xl tracking-tight">
-            <span className="text-white">Code</span>
+            <span className={dark ? 'text-white' : 'text-gray-900'}>Code</span>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Hub</span>
           </span>
         </Link>
@@ -93,7 +94,11 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/login" className={`text-sm transition ${dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>Login</Link>
+              <Link to="/login" className={`text-sm font-medium transition px-3 py-1.5 rounded-lg ${
+                dark
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+              }`}>Login</Link>
               <Link to="/signup" className="text-sm bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-4 py-1.5 rounded-lg hover:opacity-90 transition shadow-lg shadow-cyan-400/20">
                 Sign Up
               </Link>

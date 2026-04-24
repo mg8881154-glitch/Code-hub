@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
 import Badges from './pages/Badges'
 import Bookmarks from './pages/Bookmarks'
+import Interview from './pages/Interview'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -31,6 +32,7 @@ function AppContent() {
         <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
         <Route path="/badges" element={<ProtectedRoute><Badges /></ProtectedRoute>} />
         <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
+        <Route path="/interview" element={<Interview />} />
       </Routes>
       {!hideNavbar && <AIChatbot />}
     </>

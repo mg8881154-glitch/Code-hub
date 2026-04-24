@@ -326,6 +326,40 @@ app.delete("/api/message/:messageId", async (req, res) => {
     res.status(500).json({ message: "Failed to delete message" });
   }
 });
+// AI Mock Interview route
+app.post("/ai/interview", async (req, res) => {
+  try {
+    const { message, history, problem } = req.body;
+    const systemPrompt = `You are an expert Technical Interviewer from Google/Meta conducting a realistic DSA interview.
+Problem: "${problem?.title || 'Two Sum'}" - ${problem?.description || ''}
+Difficulty: ${problem?.difficulty || 'Medium'}
+
+Rules:
+- Greet and introduce problem briefly on first message.
+- Ask clarifying questions phase first.
+- Ask candidate to explain approach BEFORE coding.
+- Listen for time/space complexity. If suboptimal hint: "Can we do better?"
+- NEVER give full code unless explicitly asked and stuck.
+- Use: "Walk me through your thought process" / "How would this handle edge cases?"
+- Keep responses 2-3 sentences MAX for voice interaction.
+- Be encouraging but professional.`;
+
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...history,
+        { role: "user", content: message }
+      ],
+      max_tokens: 200,
+      temperature: 0.7,
+    });
+    res.json({ reply: response.choices[0].message.content });
+  } catch (err) {
+    res.status(500).json({ reply: "Interview session error. Please try again." });
+  }
+});
+
 app.get("/daily-challenge", async (req, res) => {
   try {
     const count = await Problem.countDocuments();

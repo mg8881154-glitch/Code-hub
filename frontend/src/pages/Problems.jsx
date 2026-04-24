@@ -137,6 +137,10 @@ export default function Problems() {
                   className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-cyan-400 border border-cyan-400/30 px-4 py-2 rounded-xl hover:bg-cyan-400 hover:text-black transition">
                   Solve →
                 </Link>
+                <Link to="/interview" state={{ problem: p }}
+                  className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-purple-400 border border-purple-400/30 px-3 py-2 rounded-xl hover:bg-purple-400 hover:text-black transition">
+                  🎙 Interview
+                </Link>
               </div>
             ))}
             {filtered.length === 0 && (
