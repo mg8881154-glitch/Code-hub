@@ -16,11 +16,14 @@ const LANG_MAP = { 'C++': 'cpp', Java: 'java', Python: 'python', JavaScript: 'ja
 
 // ── Feedback Dashboard ──
 function FeedbackDashboard({ score, onRestart }) {
+  const [showSolution, setShowSolution] = useState(false)
+
+  // Fix 1: Shorter labels to prevent overlap
   const radarData = [
-    { subject: 'Problem Solving', A: score.problemSolving },
-    { subject: 'Coding Style', A: score.codingStyle },
-    { subject: 'Communication', A: score.communication },
-    { subject: 'Optimization', A: score.optimization },
+    { subject: 'Problem', A: score.problemSolving },
+    { subject: 'Coding', A: score.codingStyle },
+    { subject: 'Comms', A: score.communication },
+    { subject: 'Optimize', A: score.optimization },
     { subject: 'Edge Cases', A: score.edgeCases },
   ]
 
@@ -29,11 +32,19 @@ function FeedbackDashboard({ score, onRestart }) {
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="text-center mb-10">
+          {/* Fix 4: HIRE badge glowing animation */}
+          <style>{`
+            @keyframes hireGlow {
+              0%, 100% { box-shadow: 0 0 15px rgba(74,222,128,0.4), 0 0 30px rgba(74,222,128,0.15); }
+              50% { box-shadow: 0 0 35px rgba(74,222,128,0.7), 0 0 70px rgba(74,222,128,0.3); }
+            }
+          `}</style>
           <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-2xl font-black mb-4 ${
             score.verdict === 'HIRE'
-              ? 'bg-green-400/10 border border-green-400/30 text-green-400'
+              ? 'bg-green-400/10 border border-green-400/40 text-green-400'
               : 'bg-red-400/10 border border-red-400/30 text-red-400'
-          }`}>
+          }`}
+          style={score.verdict === 'HIRE' ? { animation: 'hireGlow 2s ease-in-out infinite' } : {}}>
             {score.verdict === 'HIRE' ? '✅ HIRE' : '❌ NO HIRE'}
           </div>
           <h1 className="text-3xl font-black text-white mb-2">Interview Feedback Report</h1>
@@ -55,15 +66,16 @@ function FeedbackDashboard({ score, onRestart }) {
 
         {/* Radar Chart + Pillars */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Radar */}
+          {/* Fix 1: outerRadius reduced + shorter labels = no overlap */}
           <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
             <h2 className="text-white font-semibold mb-4 text-center">📊 Performance Radar</h2>
-            <ResponsiveContainer width="100%" height={260}>
-              <RadarChart data={radarData}>
+            <ResponsiveContainer width="100%" height={280}>
+              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="62%">
                 <PolarGrid stroke="#1f2937" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <Radar name="Score" dataKey="A" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.2} strokeWidth={2} />
-                <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #374151', borderRadius: 8, color: '#fff' }} />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 12, fontWeight: 500 }} tickLine={false} />
+                <Radar name="Score" dataKey="A" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.25} strokeWidth={2.5} />
+                <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #374151', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                  formatter={(v) => [`${v}/100`, 'Score']} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
@@ -71,17 +83,17 @@ function FeedbackDashboard({ score, onRestart }) {
           {/* 3 Pillars */}
           <div className="space-y-4">
             {[
-              { label: 'Technical', icon: '⚙️', score: score.technical, color: 'cyan', feedback: score.technicalFeedback },
-              { label: 'Communication', icon: '🗣', score: score.communication, color: 'purple', feedback: score.communicationFeedback },
-              { label: 'Logical Reasoning', icon: '🧠', score: score.logical, color: 'green', feedback: score.logicalFeedback },
+              { label: 'Technical', icon: '⚙️', val: score.technical, bar: 'bg-cyan-400', txt: 'text-cyan-400', feedback: score.technicalFeedback },
+              { label: 'Communication', icon: '🗣', val: score.communication, bar: 'bg-purple-400', txt: 'text-purple-400', feedback: score.communicationFeedback },
+              { label: 'Logical Reasoning', icon: '🧠', val: score.logical, bar: 'bg-green-400', txt: 'text-green-400', feedback: score.logicalFeedback },
             ].map(p => (
               <div key={p.label} className="bg-[#161b22] border border-gray-800 rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-semibold text-sm flex items-center gap-2">{p.icon} {p.label}</span>
-                  <span className={`text-lg font-black text-${p.color}-400`}>{p.score}/100</span>
+                  <span className="text-white font-semibold text-sm">{p.icon} {p.label}</span>
+                  <span className={`text-lg font-black ${p.txt}`}>{p.val}/100</span>
                 </div>
                 <div className="h-1.5 bg-gray-800 rounded-full mb-2">
-                  <div className={`h-full bg-${p.color}-400 rounded-full`} style={{ width: `${p.score}%` }} />
+                  <div className={`h-full ${p.bar} rounded-full`} style={{ width: `${p.val}%` }} />
                 </div>
                 <p className="text-gray-400 text-xs">{p.feedback}</p>
               </div>
@@ -91,9 +103,8 @@ function FeedbackDashboard({ score, onRestart }) {
 
         {/* Strengths + Improvements */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Strengths */}
           <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4 flex items-center gap-2">💪 Key Strengths</h2>
+            <h2 className="text-white font-semibold mb-4">💪 Key Strengths</h2>
             <div className="space-y-3">
               {score.strengths.map((s, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -103,10 +114,8 @@ function FeedbackDashboard({ score, onRestart }) {
               ))}
             </div>
           </div>
-
-          {/* Improvements */}
           <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4 flex items-center gap-2">🎯 Improvement Areas</h2>
+            <h2 className="text-white font-semibold mb-4">🎯 Improvement Areas</h2>
             <div className="space-y-3">
               {score.improvements.map((s, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -117,8 +126,7 @@ function FeedbackDashboard({ score, onRestart }) {
             </div>
           </div>
         </div>
-
-        {/* Missed Edge Cases */}
+        {/* Fix 2: Edge Cases table — high contrast colors */}
         <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6 mb-8">
           <h2 className="text-white font-semibold mb-4">⚠️ Edge Cases to Consider</h2>
           <div className="overflow-x-auto">
@@ -136,11 +144,15 @@ function FeedbackDashboard({ score, onRestart }) {
                     <td className="py-3 pr-4 text-gray-300">{ec.case}</td>
                     <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{ec.example}</td>
                     <td className="py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        ec.handled ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'
-                      }`}>
-                        {ec.handled ? '✓ Handled' : '✗ Missed'}
-                      </span>
+                      {ec.handled ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/40">
+                          ✓ Handled
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/40">
+                          ✗ Missed
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -149,12 +161,37 @@ function FeedbackDashboard({ score, onRestart }) {
           </div>
         </div>
 
-        <div className="text-center">
+        {/* Fix 3: Two buttons — Start New + View Suggested Solution */}
+        <div className="flex items-center justify-center gap-4">
           <button onClick={onRestart}
             className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-10 py-3.5 rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-400/25">
             🔄 Start New Interview
           </button>
+          <button onClick={() => setShowSolution(s => !s)}
+            className="border border-cyan-400/40 text-cyan-400 font-semibold px-8 py-3.5 rounded-xl hover:bg-cyan-400/10 hover:border-cyan-400 transition">
+            💡 {showSolution ? 'Hide' : 'View'} Suggested Solution
+          </button>
         </div>
+
+        {/* Suggested Solution Panel */}
+        {showSolution && (
+          <div className="mt-6 bg-[#161b22] border border-cyan-400/20 rounded-2xl p-6">
+            <h2 className="text-white font-semibold mb-3">💡 Suggested Solution</h2>
+            <pre className="bg-[#0d1117] rounded-xl p-4 text-green-300 text-sm font-mono overflow-x-auto leading-relaxed">{`// Optimal O(n) solution using HashMap
+function twoSum(nums, target) {
+  const map = new Map();
+  for (let i = 0; i < nums.length; i++) {
+    const complement = target - nums[i];
+    if (map.has(complement)) {
+      return [map.get(complement), i];
+    }
+    map.set(nums[i], i);
+  }
+  return []; // No solution found
+}
+// Time: O(n) | Space: O(n)`}</pre>
+          </div>
+        )}
       </div>
     </div>
   )
