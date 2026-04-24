@@ -1,13 +1,166 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from 'axios'
+import Editor from '@monaco-editor/react'
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
-const INTERVIEWER_VOICE = {
-  name: 'Interviewer',
-  avatar: '👨‍💼',
-  color: 'text-blue-400',
+// ── Starter Code ──
+const STARTER = {
+  'C++': `#include <bits/stdc++.h>\nusing namespace std;\n\nclass Solution {\npublic:\n    // Write your solution here\n    \n};`,
+  Java: `class Solution {\n    // Write your solution here\n    \n}`,
+  Python: `class Solution:\n    # Write your solution here\n    pass`,
+  JavaScript: `/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nvar solve = function(nums, target) {\n    // Write your solution here\n};`,
 }
 
+const LANG_MAP = { 'C++': 'cpp', Java: 'java', Python: 'python', JavaScript: 'javascript' }
+
+// ── Feedback Dashboard ──
+function FeedbackDashboard({ score, onRestart }) {
+  const radarData = [
+    { subject: 'Problem Solving', A: score.problemSolving },
+    { subject: 'Coding Style', A: score.codingStyle },
+    { subject: 'Communication', A: score.communication },
+    { subject: 'Optimization', A: score.optimization },
+    { subject: 'Edge Cases', A: score.edgeCases },
+  ]
+
+  return (
+    <div className="min-h-screen bg-[#0d1117] pt-14 pb-10">
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-2xl font-black mb-4 ${
+            score.verdict === 'HIRE'
+              ? 'bg-green-400/10 border border-green-400/30 text-green-400'
+              : 'bg-red-400/10 border border-red-400/30 text-red-400'
+          }`}>
+            {score.verdict === 'HIRE' ? '✅ HIRE' : '❌ NO HIRE'}
+          </div>
+          <h1 className="text-3xl font-black text-white mb-2">Interview Feedback Report</h1>
+          <p className="text-gray-400 text-sm">Interviewed by Alex · Google · {new Date().toLocaleDateString()}</p>
+        </div>
+
+        {/* Final Score */}
+        <div className="bg-gradient-to-r from-cyan-400/10 to-blue-500/10 border border-cyan-400/20 rounded-3xl p-8 text-center mb-8">
+          <p className="text-gray-400 text-sm mb-2 uppercase tracking-widest">Final Score</p>
+          <div className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
+            {score.total}
+          </div>
+          <p className="text-gray-400">out of 100</p>
+          <div className="mt-4 h-3 bg-gray-800 rounded-full max-w-md mx-auto overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-1000"
+              style={{ width: `${score.total}%` }} />
+          </div>
+        </div>
+
+        {/* Radar Chart + Pillars */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Radar */}
+          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
+            <h2 className="text-white font-semibold mb-4 text-center">📊 Performance Radar</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="#1f2937" />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                <Radar name="Score" dataKey="A" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.2} strokeWidth={2} />
+                <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #374151', borderRadius: 8, color: '#fff' }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* 3 Pillars */}
+          <div className="space-y-4">
+            {[
+              { label: 'Technical', icon: '⚙️', score: score.technical, color: 'cyan', feedback: score.technicalFeedback },
+              { label: 'Communication', icon: '🗣', score: score.communication, color: 'purple', feedback: score.communicationFeedback },
+              { label: 'Logical Reasoning', icon: '🧠', score: score.logical, color: 'green', feedback: score.logicalFeedback },
+            ].map(p => (
+              <div key={p.label} className="bg-[#161b22] border border-gray-800 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white font-semibold text-sm flex items-center gap-2">{p.icon} {p.label}</span>
+                  <span className={`text-lg font-black text-${p.color}-400`}>{p.score}/100</span>
+                </div>
+                <div className="h-1.5 bg-gray-800 rounded-full mb-2">
+                  <div className={`h-full bg-${p.color}-400 rounded-full`} style={{ width: `${p.score}%` }} />
+                </div>
+                <p className="text-gray-400 text-xs">{p.feedback}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Strengths + Improvements */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Strengths */}
+          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
+            <h2 className="text-white font-semibold mb-4 flex items-center gap-2">💪 Key Strengths</h2>
+            <div className="space-y-3">
+              {score.strengths.map((s, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-green-400/10 text-green-400 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
+                  <p className="text-gray-300 text-sm">{s}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Improvements */}
+          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
+            <h2 className="text-white font-semibold mb-4 flex items-center gap-2">🎯 Improvement Areas</h2>
+            <div className="space-y-3">
+              {score.improvements.map((s, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="w-6 h-6 bg-yellow-400/10 text-yellow-400 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">{i + 1}</span>
+                  <p className="text-gray-300 text-sm">{s}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Missed Edge Cases */}
+        <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6 mb-8">
+          <h2 className="text-white font-semibold mb-4">⚠️ Edge Cases to Consider</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800 text-gray-400 text-xs uppercase">
+                  <th className="text-left py-2 pr-4">Edge Case</th>
+                  <th className="text-left py-2 pr-4">Example</th>
+                  <th className="text-left py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {score.edgeCases_table.map((ec, i) => (
+                  <tr key={i} className="border-b border-gray-800/50">
+                    <td className="py-3 pr-4 text-gray-300">{ec.case}</td>
+                    <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{ec.example}</td>
+                    <td className="py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        ec.handled ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'
+                      }`}>
+                        {ec.handled ? '✓ Handled' : '✗ Missed'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="text-center">
+          <button onClick={onRestart}
+            className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-10 py-3.5 rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-400/25">
+            🔄 Start New Interview
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Interview Component ──
 export default function Interview() {
   const location = useLocation()
   const problem = location.state?.problem || null
@@ -18,7 +171,10 @@ export default function Interview() {
   const [listening, setListening] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [started, setStarted] = useState(false)
-  const [score, setScore] = useState(null)
+  const [lang, setLang] = useState('C++')
+  const [code, setCode] = useState(STARTER['C++'])
+  const [codeApproved, setCodeApproved] = useState(false)
+  const [feedback, setFeedback] = useState(null)
   const bottomRef = useRef(null)
   const recognitionRef = useRef(null)
 
@@ -26,23 +182,30 @@ export default function Interview() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [history])
 
-  // TTS — speak AI response
+  // Check if AI approved coding
+  useEffect(() => {
+    const last = history[history.length - 1]
+    if (last?.role === 'assistant') {
+      const text = last.content.toLowerCase()
+      if (text.includes('go ahead') || text.includes('implement it') || text.includes('start coding') || text.includes('sounds correct')) {
+        setCodeApproved(true)
+      }
+    }
+  }, [history])
+
   const speak = (text) => {
     window.speechSynthesis.cancel()
     const clean = text.replace(/[*#`_]/g, '').slice(0, 400)
-    const utterance = new SpeechSynthesisUtterance(clean)
-    utterance.lang = 'en-US'
-    utterance.rate = 0.9
-    utterance.pitch = 1
+    const u = new SpeechSynthesisUtterance(clean)
+    u.lang = 'en-US'; u.rate = 0.9; u.pitch = 1
     const voices = window.speechSynthesis.getVoices()
-    const preferred = voices.find(v => v.lang === 'en-US' && (v.name.includes('Google') || v.name.includes('Male')))
-    if (preferred) utterance.voice = preferred
-    utterance.onstart = () => setSpeaking(true)
-    utterance.onend = () => setSpeaking(false)
-    window.speechSynthesis.speak(utterance)
+    const v = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'))
+    if (v) u.voice = v
+    u.onstart = () => setSpeaking(true)
+    u.onend = () => setSpeaking(false)
+    window.speechSynthesis.speak(u)
   }
 
-  // STT — listen to user
   const toggleListen = () => {
     if (listening) { recognitionRef.current?.stop(); setListening(false); return }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -56,13 +219,11 @@ export default function Interview() {
   }
 
   const startInterview = async () => {
-    setStarted(true)
-    setLoading(true)
+    setStarted(true); setLoading(true)
     try {
       const res = await axios.post('http://localhost:5000/ai/interview', {
-        message: "Start the interview. Greet me and introduce the problem.",
-        history: [],
-        problem
+        message: "Start the interview. Greet me as Alex from Google and introduce the problem.",
+        history: [], problem
       })
       const reply = res.data.reply
       setHistory([{ role: 'assistant', content: reply }])
@@ -79,201 +240,237 @@ export default function Interview() {
     setLoading(true)
     try {
       const res = await axios.post('http://localhost:5000/ai/interview', {
-        message: userMsg,
-        history: newHistory.slice(-10), // last 10 messages for context
-        problem
+        message: userMsg, history: newHistory.slice(-12), problem
       })
       const reply = res.data.reply
       setHistory(prev => [...prev, { role: 'assistant', content: reply }])
       speak(reply)
-
-      // Auto score after 10+ exchanges
-      if (newHistory.length >= 10 && !score) {
-        setScore({ rating: 4, feedback: "Good approach! Clear communication and correct complexity analysis." })
-      }
     } catch { } finally { setLoading(false) }
   }
 
-  const handleKey = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+  const submitCode = async () => {
+    const msg = `I have submitted my code. Here is my solution:\n\`\`\`${lang}\n${code}\n\`\`\``
+    await send(msg)
   }
 
   const endInterview = () => {
     window.speechSynthesis.cancel()
-    setScore({
-      rating: Math.floor(Math.random() * 2) + 4,
-      feedback: "Great session! You demonstrated solid understanding of the problem. Work on explaining time complexity more clearly upfront."
+    setFeedback({
+      total: 72,
+      verdict: 'HIRE',
+      technical: 75, technicalFeedback: 'Good use of HashMap for O(n) solution. Edge case handling was adequate.',
+      communication: 70, communicationFeedback: 'Clear explanation of approach. Could improve by asking more clarifying questions upfront.',
+      logical: 72, logicalFeedback: 'Correctly identified the optimal approach after initial hint. Good problem decomposition.',
+      problemSolving: 75, codingStyle: 68, optimization: 72, edgeCases: 65,
+      strengths: [
+        'Correctly identified HashMap as the optimal data structure',
+        'Explained time complexity O(n) clearly after prompting',
+        'Handled the basic test case correctly in code',
+      ],
+      improvements: [
+        'Ask clarifying questions proactively — e.g., "Can there be duplicate values?" before starting',
+        'Consider edge cases like empty array or no valid pair before coding',
+      ],
+      edgeCases_table: [
+        { case: 'Empty array', example: 'nums = []', handled: false },
+        { case: 'Single element', example: 'nums = [5]', handled: false },
+        { case: 'Duplicate values', example: 'nums = [3,3], target=6', handled: true },
+        { case: 'Negative numbers', example: 'nums = [-1,2], target=1', handled: true },
+        { case: 'No valid pair', example: 'nums = [1,2], target=10', handled: false },
+      ]
     })
   }
 
-  return (
-    <div className="pt-14 min-h-screen bg-[#0d1117] text-white">
-      <div className="max-w-4xl mx-auto px-6 py-8">
+  if (feedback) return <FeedbackDashboard score={feedback} onRestart={() => { setFeedback(null); setStarted(false); setHistory([]) }} />
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+  return (
+    <div className="pt-14 h-screen bg-[#0d1117] flex flex-col overflow-hidden">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6 py-2.5 bg-[#161b22] border-b border-gray-800 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-lg">🎙</span>
           <div>
-            <h1 className="text-2xl font-black text-white flex items-center gap-2">
-              🎙 AI Mock Interview
-            </h1>
-            <p className="text-gray-400 text-sm mt-1">
-              {problem ? `Problem: ${problem.title} (${problem.difficulty})` : 'General DSA Interview'}
-            </p>
+            <p className="text-white text-sm font-semibold">AI Mock Interview — Alex (Google)</p>
+            <p className="text-gray-500 text-xs">{problem ? `${problem.title} · ${problem.difficulty}` : 'General DSA'}</p>
           </div>
-          {started && !score && (
+        </div>
+        <div className="flex items-center gap-3">
+          {started && (
+            <span className={`text-xs px-3 py-1 rounded-full ${
+              speaking ? 'bg-green-400/10 text-green-400 animate-pulse' :
+              listening ? 'bg-red-400/10 text-red-400 animate-pulse' :
+              'bg-gray-800 text-gray-400'
+            }`}>
+              {speaking ? '🔊 Alex Speaking' : listening ? '🎤 Listening' : '● Live'}
+            </span>
+          )}
+          {started && (
             <button onClick={endInterview}
-              className="text-xs border border-red-400/30 text-red-400 px-4 py-2 rounded-xl hover:bg-red-400/10 transition">
+              className="text-xs border border-red-400/30 text-red-400 px-4 py-1.5 rounded-lg hover:bg-red-400/10 transition">
               End Interview
             </button>
           )}
         </div>
+      </div>
 
-        {/* Score Card */}
-        {score && (
-          <div className="bg-gradient-to-r from-cyan-400/10 to-blue-500/10 border border-cyan-400/30 rounded-2xl p-6 mb-6">
-            <h2 className="text-white font-bold text-lg mb-2">📊 Interview Feedback</h2>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex gap-1">
-                {[1,2,3,4,5].map(i => (
-                  <span key={i} className={`text-xl ${i <= score.rating ? 'text-yellow-400' : 'text-gray-700'}`}>★</span>
-                ))}
-              </div>
-              <span className="text-white font-semibold">{score.rating}/5</span>
-            </div>
-            <p className="text-gray-300 text-sm">{score.feedback}</p>
-            <button onClick={() => { setHistory([]); setStarted(false); setScore(null) }}
-              className="mt-4 bg-cyan-400 text-black font-bold px-6 py-2 rounded-xl text-sm hover:bg-cyan-300 transition">
-              Start New Interview
-            </button>
-          </div>
-        )}
-
-        {/* Not started */}
-        {!started && !score && (
-          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-8 text-center mb-6">
-            <div className="text-6xl mb-4">🎙</div>
-            <h2 className="text-white font-bold text-xl mb-2">Ready for your Mock Interview?</h2>
-            <p className="text-gray-400 text-sm mb-6 max-w-md mx-auto">
-              An AI interviewer from Google/Meta will ask you DSA questions, evaluate your approach, and give real-time feedback.
+      {!started ? (
+        /* Start Screen */
+        <div className="flex-1 flex items-center justify-center">
+          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-10 text-center max-w-lg">
+            <div className="text-6xl mb-4">👨‍💼</div>
+            <h2 className="text-white font-black text-2xl mb-2">Meet Alex</h2>
+            <p className="text-cyan-400 text-sm mb-4">Senior Engineer · Google · 10+ years</p>
+            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+              Alex will conduct a realistic technical interview. Explain your approach before coding, handle edge cases, and submit your solution.
             </p>
-            <div className="flex flex-wrap justify-center gap-3 mb-6 text-xs">
-              {['🎤 Voice Input', '🔊 AI Voice Response', '💡 Hints on Request', '📊 Final Score'].map(f => (
-                <span key={f} className="bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 px-3 py-1.5 rounded-full">{f}</span>
+            {problem && (
+              <div className="bg-[#0d1117] border border-gray-800 rounded-xl p-4 mb-6 text-left">
+                <p className="text-xs text-gray-500 mb-1">Today's Problem</p>
+                <p className="text-white font-semibold">{problem.title}</p>
+                <p className="text-gray-400 text-xs mt-1 line-clamp-2">{problem.description}</p>
+              </div>
+            )}
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {['🎤 Voice Input', '🔊 AI Voice', '💡 Smart Hints', '📊 Feedback Report'].map(f => (
+                <span key={f} className="text-xs bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 px-3 py-1 rounded-full">{f}</span>
               ))}
             </div>
             <button onClick={startInterview}
-              className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-10 py-3.5 rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-400/25">
-              Start Interview 🚀
+              className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-10 py-3.5 rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-400/25 w-full">
+              Start Interview with Alex 🚀
             </button>
           </div>
-        )}
-
-        {/* Chat */}
-        {started && (
-          <div className="bg-[#161b22] border border-gray-800 rounded-2xl overflow-hidden">
-            {/* Status bar */}
-            <div className="flex items-center justify-between px-5 py-3 bg-[#0d1117] border-b border-gray-800">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">👨‍💼</span>
-                <span className="text-white text-sm font-semibold">AI Interviewer</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  speaking ? 'bg-green-400/10 text-green-400 animate-pulse' :
-                  listening ? 'bg-red-400/10 text-red-400 animate-pulse' :
-                  'bg-gray-800 text-gray-400'
-                }`}>
-                  {speaking ? '🔊 Speaking...' : listening ? '🎤 Listening...' : '● Live'}
-                </span>
-              </div>
-              <button onClick={() => { window.speechSynthesis.cancel(); setSpeaking(false) }}
-                className={`text-xs text-gray-500 hover:text-red-400 transition ${!speaking && 'opacity-0'}`}>
-                ⏹ Stop
-              </button>
-            </div>
-
+        </div>
+      ) : (
+        /* Two Column Layout */
+        <div className="flex-1 flex overflow-hidden">
+          {/* LEFT: Chat (40%) */}
+          <div className="w-[40%] flex flex-col border-r border-gray-800">
             {/* Messages */}
-            <div className="h-96 overflow-y-auto p-5 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {history.map((msg, i) => (
-                <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${
+                <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${
                     msg.role === 'user'
                       ? 'bg-gradient-to-br from-cyan-400 to-blue-500 text-black font-bold'
-                      : 'bg-[#0d1117] border border-gray-700'
+                      : 'bg-[#0d1117] border border-gray-700 text-base'
                   }`}>
                     {msg.role === 'user' ? '👤' : '👨‍💼'}
                   </div>
-                  <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                  <div className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                     msg.role === 'user'
                       ? 'bg-gradient-to-br from-cyan-400/20 to-blue-500/20 border border-cyan-400/20 text-white rounded-tr-sm'
                       : 'bg-[#0d1117] border border-gray-800 text-gray-200 rounded-tl-sm'
                   }`}>
                     {msg.content}
                     {msg.role === 'assistant' && (
-                      <button onClick={() => speak(msg.content)}
-                        className="block mt-1 text-xs text-gray-600 hover:text-cyan-400 transition">
-                        🔊 Replay
-                      </button>
+                      <button onClick={() => speak(msg.content)} className="block mt-1 text-xs text-gray-600 hover:text-cyan-400">🔊</button>
                     )}
                   </div>
                 </div>
               ))}
               {loading && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#0d1117] border border-gray-700 flex items-center justify-center">👨‍💼</div>
+                <div className="flex gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-[#0d1117] border border-gray-700 flex items-center justify-center text-sm">👨‍💼</div>
                   <div className="bg-[#0d1117] border border-gray-800 px-4 py-3 rounded-2xl rounded-tl-sm">
-                    <div className="flex gap-1">
-                      {[0,150,300].map(d => (
-                        <span key={d} className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                      ))}
-                    </div>
+                    <div className="flex gap-1">{[0,150,300].map(d => <span key={d} className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />)}</div>
                   </div>
                 </div>
               )}
               <div ref={bottomRef} />
             </div>
 
-            {/* Quick responses */}
-            <div className="px-4 py-2 flex gap-2 overflow-x-auto border-t border-gray-800">
-              {[
-                "Can you clarify the constraints?",
-                "I'll use a HashMap approach",
-                "Time complexity is O(n)",
-                "Can I get a hint?",
-                "Let me think about edge cases"
-              ].map(q => (
+            {/* Quick replies */}
+            <div className="px-3 py-2 flex gap-1.5 overflow-x-auto border-t border-gray-800">
+              {["Clarify constraints?", "I'll use HashMap O(n)", "Time: O(n), Space: O(n)", "Need a hint", "I have submitted my code"].map(q => (
                 <button key={q} onClick={() => send(q)}
-                  className="text-xs text-gray-400 bg-[#0d1117] border border-gray-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:border-cyan-400/50 hover:text-cyan-400 transition flex-shrink-0">
+                  className="text-xs text-gray-400 bg-[#0d1117] border border-gray-700 px-2.5 py-1.5 rounded-full whitespace-nowrap hover:border-cyan-400/50 hover:text-cyan-400 transition flex-shrink-0">
                   {q}
                 </button>
               ))}
             </div>
 
             {/* Input */}
-            <div className="px-4 py-3 border-t border-gray-800 flex gap-2 items-end">
+            <div className="px-3 py-3 border-t border-gray-800 flex gap-2 items-end">
               <button onClick={toggleListen}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition ${
+                className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition text-sm ${
                   listening ? 'bg-red-400 text-white animate-pulse' : 'bg-[#0d1117] border border-gray-700 text-gray-400 hover:text-white'
-                }`}>
-                🎤
-              </button>
-              <textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKey}
-                placeholder={listening ? '🎤 Listening...' : 'Type your answer or use mic...'}
+                }`}>🎤</button>
+              <textarea value={input} onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+                placeholder={listening ? '🎤 Listening...' : 'Type your answer...'}
                 rows={1}
-                className="flex-1 bg-[#0d1117] border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 resize-none"
-              />
-              <button onClick={() => send()}
-                disabled={loading || !input.trim()}
-                className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-black hover:opacity-90 transition disabled:opacity-30 flex-shrink-0">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className="flex-1 bg-[#0d1117] border border-gray-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 resize-none" />
+              <button onClick={() => send()} disabled={loading || !input.trim()}
+                className="w-9 h-9 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-black hover:opacity-90 transition disabled:opacity-30 flex-shrink-0">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               </button>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* RIGHT: Monaco Editor (60%) */}
+          <div className="flex-1 flex flex-col bg-[#0d1117]">
+            {/* Editor toolbar */}
+            <div className="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-gray-800 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <select value={lang} onChange={e => { setLang(e.target.value); setCode(STARTER[e.target.value]) }}
+                  className="bg-[#0d1117] border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-cyan-400">
+                  {Object.keys(STARTER).map(l => <option key={l}>{l}</option>)}
+                </select>
+                {!codeApproved && (
+                  <span className="text-xs text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-3 py-1 rounded-full">
+                    🔒 Explain approach first
+                  </span>
+                )}
+                {codeApproved && (
+                  <span className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 px-3 py-1 rounded-full">
+                    ✅ Approach approved — start coding!
+                  </span>
+                )}
+              </div>
+              <button onClick={submitCode}
+                disabled={!codeApproved}
+                className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-5 py-1.5 rounded-lg text-xs hover:opacity-90 transition disabled:opacity-30">
+                Submit Code →
+              </button>
+            </div>
+
+            {/* Monaco Editor */}
+            <div className="flex-1 relative">
+              {!codeApproved && (
+                <div className="absolute inset-0 bg-[#0d1117]/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-4xl mb-3">🔒</div>
+                    <p className="text-white font-semibold">Editor Locked</p>
+                    <p className="text-gray-400 text-sm mt-1">Explain your approach to Alex first</p>
+                  </div>
+                </div>
+              )}
+              <Editor
+                height="100%"
+                language={LANG_MAP[lang]}
+                value={code}
+                onChange={v => setCode(v || '')}
+                theme="vs-dark"
+                options={{
+                  fontSize: 14,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  lineNumbers: 'on',
+                  roundedSelection: true,
+                  padding: { top: 16 },
+                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                  fontLigatures: true,
+                  cursorBlinking: 'smooth',
+                  smoothScrolling: true,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
