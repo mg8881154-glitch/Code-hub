@@ -1,0 +1,15 @@
+﻿node_modules
+.env
+dist
+frontend/codehub-ui
+frontend/public
+frontend/src/App.css
+frontend/src/App.test.js
+frontend/src/logo.svg
+frontend/src/reportWebVitals.js
+frontend/src/setupTests.js
+frontend/src/pages/LoginPage.jsx
+backend/seed.js
+backend/seed2.js
+backend/seedAll.js
+backend/seedCSES.js
