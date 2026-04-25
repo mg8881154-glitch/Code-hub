@@ -191,8 +191,13 @@ export default function Home() {
       {/* ── Illustration + Features ── */}
       <section className="max-w-7xl mx-auto px-6 py-24">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-black text-white mb-3">Everything you need to <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">succeed</span></h2>
-          <p className="text-gray-400">Built for developers who want to crack FAANG interviews</p>
+          <h2 className={`text-4xl font-black mb-3 ${dark ? 'text-white' : 'text-gray-900'}`}>
+            Everything you need to{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">succeed</span>
+          </h2>
+          <p className={dark ? 'text-gray-400' : 'text-gray-700'}>
+            Built for developers who want to crack FAANG interviews
+          </p>
         </div>
 
         {/* Big illustration row */}
@@ -209,22 +214,22 @@ export default function Home() {
             <div className="flex items-start gap-4 bg-[#161b22] border border-gray-800 rounded-2xl p-5 hover:border-cyan-400/30 transition">
               <div className="w-12 h-12 bg-cyan-400/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">⚡</div>
               <div>
-                <h3 className="text-white font-semibold mb-1">75+ DSA Topics Covered</h3>
-                <p className="text-gray-400 text-sm">Arrays, Trees, Graphs, DP, Backtracking, Greedy and more — all in one place.</p>
+                <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-900'}`}>75+ DSA Topics Covered</h3>
+                <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>Arrays, Trees, Graphs, DP, Backtracking, Greedy and more — all in one place.</p>
               </div>
             </div>
             <div className="flex items-start gap-4 bg-[#161b22] border border-gray-800 rounded-2xl p-5 hover:border-cyan-400/30 transition">
               <div className="w-12 h-12 bg-purple-400/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">🤖</div>
               <div>
-                <h3 className="text-white font-semibold mb-1">AI-Powered Hints</h3>
-                <p className="text-gray-400 text-sm">Stuck? Ask the AI assistant for hints, approach, time complexity — without spoiling the solution.</p>
+                <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-900'}`}>AI-Powered Hints</h3>
+                <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>Stuck? Ask the AI assistant for hints, approach, time complexity — without spoiling the solution.</p>
               </div>
             </div>
             <div className="flex items-start gap-4 bg-[#161b22] border border-gray-800 rounded-2xl p-5 hover:border-cyan-400/30 transition">
               <div className="w-12 h-12 bg-green-400/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">📊</div>
               <div>
-                <h3 className="text-white font-semibold mb-1">Track Your Progress</h3>
-                <p className="text-gray-400 text-sm">Visual dashboard with solved count, streaks, skill breakdown and recent submissions.</p>
+                <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-900'}`}>Track Your Progress</h3>
+                <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>Visual dashboard with solved count, streaks, skill breakdown and recent submissions.</p>
               </div>
             </div>
           </div>
@@ -256,8 +261,8 @@ export default function Home() {
               className="w-32 h-32 mx-auto mb-6 drop-shadow-xl"
               onError={e => e.target.style.display = 'none'}
             />
-            <h2 className="text-3xl font-black text-white mb-3">Ready to crack your dream job? 🚀</h2>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto">Join thousands of developers practicing DSA daily and landing offers at top tech companies.</p>
+            <h2 className={`text-3xl font-black mb-3 ${dark ? 'text-white' : 'text-gray-900'}`}>Ready to crack your dream job? 🚀</h2>
+            <p className={`mb-8 max-w-md mx-auto ${dark ? 'text-gray-400' : 'text-gray-700'}`}>Join thousands of developers practicing DSA daily and landing offers at top tech companies.</p>
             <Link to="/signup"
               className="inline-block bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-12 py-4 rounded-xl hover:opacity-90 transition shadow-xl shadow-cyan-400/25 text-base">
               Get Started Free →
