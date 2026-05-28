@@ -155,18 +155,16 @@ async function checkAndAwardBadges(userData) {
   return newBadges;
 }
 
-// ── Bookmark Routes ──
-app.post("/user/:userId/bookmark/:problemId", async (req, res) => {
+// ── Bookmark Routes (protected — real userId from JWT) ──
+app.post("/user/bookmark/:problemId", protect, async (req, res) => {
   try {
-    const { userId, problemId } = req.params;
+    const userId = req.user.id;
+    const { problemId } = req.params;
     let userData = await UserData.findOne({ userId });
     if (!userData) userData = new UserData({ userId });
     const idx = userData.bookmarks.indexOf(problemId);
-    if (idx === -1) {
-      userData.bookmarks.push(problemId);
-    } else {
-      userData.bookmarks.splice(idx, 1);
-    }
+    if (idx === -1) userData.bookmarks.push(problemId);
+    else userData.bookmarks.splice(idx, 1);
     const newBadges = await checkAndAwardBadges(userData);
     userData.badges.push(...newBadges);
     await userData.save();
@@ -174,17 +172,18 @@ app.post("/user/:userId/bookmark/:problemId", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/user/:userId/bookmarks", async (req, res) => {
+app.get("/user/bookmarks", protect, async (req, res) => {
   try {
-    const userData = await UserData.findOne({ userId: req.params.userId }).populate("bookmarks");
+    const userData = await UserData.findOne({ userId: req.user.id }).populate("bookmarks");
     res.json(userData?.bookmarks || []);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── Notes Routes ──
-app.post("/user/:userId/note/:problemId", async (req, res) => {
+// ── Notes Routes (protected) ──
+app.post("/user/note/:problemId", protect, async (req, res) => {
   try {
-    const { userId, problemId } = req.params;
+    const userId = req.user.id;
+    const { problemId } = req.params;
     const { note } = req.body;
     let userData = await UserData.findOne({ userId });
     if (!userData) userData = new UserData({ userId });
@@ -196,33 +195,31 @@ app.post("/user/:userId/note/:problemId", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/user/:userId/note/:problemId", async (req, res) => {
+app.get("/user/note/:problemId", protect, async (req, res) => {
   try {
-    const userData = await UserData.findOne({ userId: req.params.userId });
+    const userData = await UserData.findOne({ userId: req.user.id });
     const note = userData?.notes.find(n => n.problemId.toString() === req.params.problemId);
     res.json({ note: note?.note || "" });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── Solve + Badge Routes ──
-app.post("/user/:userId/solve/:problemId", async (req, res) => {
+// ── Solve + Badge Routes (protected) ──
+app.post("/user/solve/:problemId", protect, async (req, res) => {
   try {
-    const { userId, problemId } = req.params;
-    const problem = await Problem.findById(problemId);
+    const userId = req.user.id;
+    const { problemId } = req.params;
     let userData = await UserData.findOne({ userId });
     if (!userData) userData = new UserData({ userId });
     if (!userData.solvedProblems.includes(problemId)) {
       userData.solvedProblems.push(problemId);
     }
-    // Update streak
     const today = new Date(); today.setHours(0,0,0,0);
     const last = userData.lastSolvedDate ? new Date(userData.lastSolvedDate) : null;
-    if (last) { last.setHours(0,0,0,0); }
+    if (last) last.setHours(0,0,0,0);
     const diff = last ? (today - last) / (1000*60*60*24) : null;
     if (!last || diff > 1) userData.streak = 1;
     else if (diff === 1) userData.streak += 1;
     userData.lastSolvedDate = new Date();
-    // Count by difficulty
     const allSolved = await Problem.find({ _id: { $in: userData.solvedProblems } });
     userData.easyCount = allSolved.filter(p => p.difficulty === "Easy").length;
     userData.mediumCount = allSolved.filter(p => p.difficulty === "Medium").length;
@@ -234,21 +231,24 @@ app.post("/user/:userId/solve/:problemId", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/user/:userId/badges", async (req, res) => {
+app.get("/user/badges", protect, async (req, res) => {
   try {
-    const userData = await UserData.findOne({ userId: req.params.userId });
+    const userData = await UserData.findOne({ userId: req.user.id });
     res.json({ badges: userData?.badges || [], allBadges: BADGES });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/user/:userId/stats", async (req, res) => {
+app.get("/user/stats", protect, async (req, res) => {
   try {
-    const userData = await UserData.findOne({ userId: req.params.userId });
+    const userData = await UserData.findOne({ userId: req.user.id });
     res.json({
       solved: userData?.solvedProblems?.length || 0,
       streak: userData?.streak || 0,
       badges: userData?.badges || [],
       bookmarks: userData?.bookmarks?.length || 0,
+      easyCount: userData?.easyCount || 0,
+      mediumCount: userData?.mediumCount || 0,
+      hardCount: userData?.hardCount || 0,
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -296,7 +296,147 @@ app.post("/ai/chat", async (req, res) => {
 
 const Message = require("./models/Message");
 
-// ── Discussion / Chat Routes ──
+// ── Judge0 Code Execution ──
+app.post("/api/execute", protect, async (req, res) => {
+  try {
+    const { code, language_id, stdin = "" } = req.body;
+    const JUDGE0_URL = process.env.JUDGE0_URL || "https://judge0-ce.p.rapidapi.com";
+    const JUDGE0_KEY = process.env.JUDGE0_API_KEY;
+
+    // Submit code
+    const submitRes = await fetch(`${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-RapidAPI-Key": JUDGE0_KEY || "",
+        "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com"
+      },
+      body: JSON.stringify({ source_code: code, language_id, stdin })
+    });
+    const result = await submitRes.json();
+
+    const statusMap = {
+      1: "In Queue", 2: "Processing", 3: "Accepted",
+      4: "Wrong Answer", 5: "Time Limit Exceeded",
+      6: "Compilation Error", 7: "Runtime Error (SIGSEGV)",
+      8: "Runtime Error (SIGXFSZ)", 9: "Runtime Error (SIGFPE)",
+      10: "Runtime Error (SIGABRT)", 11: "Runtime Error (NZEC)",
+      12: "Runtime Error (Other)", 13: "Internal Error", 14: "Exec Format Error"
+    };
+
+    res.json({
+      status: statusMap[result.status?.id] || "Unknown",
+      statusId: result.status?.id,
+      stdout: result.stdout || "",
+      stderr: result.stderr || "",
+      compile_output: result.compile_output || "",
+      time: result.time,
+      memory: result.memory,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Code execution failed", details: err.message });
+  }
+});
+
+// ── Submissions Model & Routes ──
+const submissionSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
+  problemId: { type: mongoose.Schema.Types.ObjectId, ref: "Problem" },
+  code: String,
+  language: String,
+  status: String,
+  runtime: String,
+  memory: String,
+}, { timestamps: true });
+const Submission = mongoose.models.Submission || mongoose.model("Submission", submissionSchema);
+
+app.post("/api/submission", protect, async (req, res) => {
+  try {
+    const { problemId, code, language, status, runtime, memory } = req.body;
+    const sub = await Submission.create({ userId: req.user.id, problemId, code, language, status, runtime, memory });
+    res.status(201).json(sub);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get("/api/submissions/me", protect, async (req, res) => {
+  try {
+    const subs = await Submission.find({ userId: req.user.id })
+      .populate("problemId", "title difficulty")
+      .sort({ createdAt: -1 }).limit(20);
+    res.json(subs);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Real Analytics from DB ──
+app.get("/api/analytics", protect, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userData = await UserData.findOne({ userId });
+    const totalSolved = userData?.solvedProblems?.length || 0;
+
+    // Daily activity last 14 days
+    const twoWeeksAgo = new Date(); twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    const dailySubs = await Submission.aggregate([
+      { $match: { userId, createdAt: { $gte: twoWeeksAgo } } },
+      { $group: { _id: { $dateToString: { format: "%b %d", date: "$createdAt" } }, solved: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Language breakdown
+    const langBreakdown = await Submission.aggregate([
+      { $match: { userId } },
+      { $group: { _id: "$language", value: { $sum: 1 } } }
+    ]);
+
+    // Status breakdown
+    const statusBreakdown = await Submission.aggregate([
+      { $match: { userId } },
+      { $group: { _id: "$status", value: { $sum: 1 } } }
+    ]);
+
+    res.json({
+      totalSolved,
+      easyCount: userData?.easyCount || 0,
+      mediumCount: userData?.mediumCount || 0,
+      hardCount: userData?.hardCount || 0,
+      streak: userData?.streak || 0,
+      dailyActivity: dailySubs.map(d => ({ day: d._id, solved: d.solved })),
+      languageBreakdown: langBreakdown.map(l => ({ name: l._id || "Unknown", value: l.value })),
+      statusBreakdown: statusBreakdown.map(s => ({ name: s._id || "Unknown", value: s.value })),
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Real Leaderboard ──
+app.get("/api/leaderboard", async (req, res) => {
+  try {
+    const leaders = await UserData.find()
+      .sort({ "solvedProblems.length": -1 })
+      .limit(10)
+      .lean();
+    const userIds = leaders.map(l => l.userId);
+    const users = await User.find({ _id: { $in: userIds } }).select("username email");
+    const result = leaders.map((l, i) => {
+      const user = users.find(u => u._id.toString() === l.userId);
+      return { rank: i + 1, username: user?.username || "Anonymous", solved: l.solvedProblems?.length || 0, streak: l.streak || 0 };
+    });
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Enhanced Problems Search (title + difficulty + tags) ──
+app.get("/problems/search", async (req, res) => {
+  try {
+    const { q = "", difficulty, tag, source } = req.query;
+    const filter = {};
+    if (q) filter.title = { $regex: q, $options: "i" };
+    if (difficulty && difficulty !== "All") filter.difficulty = difficulty;
+    if (tag) filter.tags = { $in: [tag] };
+    if (source) filter.source = source;
+    const problems = await Problem.find(filter).limit(100);
+    res.json(problems);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 app.post("/api/message", async (req, res) => {
   try {
     const { userId, username, problemId, text } = req.body;

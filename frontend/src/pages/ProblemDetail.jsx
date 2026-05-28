@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import AIChatbot from '../components/AIChatbot'
 import Discussion from '../components/Discussion'
-
-const USER_ID = "kinetic_dev"
+import { useAuth } from '../context/AuthContext'
 
 const starterCode = {
   'C++': `#include <bits/stdc++.h>\nusing namespace std;\n\nclass Solution {\npublic:\n    // Write your solution here\n    \n};`,
@@ -12,20 +11,33 @@ const starterCode = {
   Python: `class Solution:\n    # Write your solution here\n    pass`,
 }
 
+const LANG_IDS = { 'C++': 54, Java: 62, Python: 71 }
+
 const diffStyle = {
-  Easy:   'text-green-400 bg-green-400/10 border-green-400/20',
+  Easy: 'text-green-400 bg-green-400/10 border-green-400/20',
   Medium: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
-  Hard:   'text-red-400 bg-red-400/10 border-red-400/20',
+  Hard: 'text-red-400 bg-red-400/10 border-red-400/20',
+}
+
+const STATUS_COLOR = {
+  'Accepted': 'text-green-400',
+  'Wrong Answer': 'text-red-400',
+  'Time Limit Exceeded': 'text-yellow-400',
+  'Compilation Error': 'text-orange-400',
+  'Runtime Error (SIGSEGV)': 'text-red-400',
 }
 
 export default function ProblemDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user, token } = useAuth()
+
   const [problem, setProblem] = useState(null)
   const [lang, setLang] = useState('C++')
   const [code, setCode] = useState(starterCode['C++'])
-  const [output, setOutput] = useState('')
+  const [output, setOutput] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
   const [activeTab, setActiveTab] = useState('description')
   const [bookmarked, setBookmarked] = useState(false)
   const [note, setNote] = useState('')
@@ -33,79 +45,116 @@ export default function ProblemDetail() {
   const [newBadges, setNewBadges] = useState([])
   const [solved, setSolved] = useState(false)
 
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {}
+
   useEffect(() => {
     fetch('http://localhost:5000/problems')
       .then(r => r.json())
       .then(data => {
         const found = data.find(p => p._id === id)
         setProblem(found)
-        if (found) {
-          // Load bookmark and note
-          axios.get(`http://localhost:5000/user/${USER_ID}/bookmarks`)
+        if (found && user) {
+          axios.get('http://localhost:5000/user/bookmarks', { headers: authHeader })
             .then(r => setBookmarked(r.data.some(b => b._id === id || b === id)))
-          axios.get(`http://localhost:5000/user/${USER_ID}/note/${id}`)
+            .catch(() => {})
+          axios.get(`http://localhost:5000/user/note/${id}`, { headers: authHeader })
             .then(r => setNote(r.data.note || ''))
+            .catch(() => {})
         }
       })
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, user])
 
   const toggleBookmark = async () => {
-    const res = await axios.post(`http://localhost:5000/user/${USER_ID}/bookmark/${id}`)
-    setBookmarked(res.data.bookmarks.includes(id))
+    if (!user) { navigate('/login'); return }
+    const res = await axios.post(`http://localhost:5000/user/bookmark/${id}`, {}, { headers: authHeader })
+    setBookmarked(res.data.bookmarks.some(b => b.toString() === id))
     if (res.data.newBadges?.length) setNewBadges(res.data.newBadges)
   }
 
   const saveNote = async () => {
-    await axios.post(`http://localhost:5000/user/${USER_ID}/note/${id}`, { note })
+    if (!user) { navigate('/login'); return }
+    await axios.post(`http://localhost:5000/user/note/${id}`, { note }, { headers: authHeader })
     setNoteSaved(true)
     setTimeout(() => setNoteSaved(false), 2000)
   }
 
+  const handleRun = async () => {
+    setRunning(true)
+    setOutput(null)
+    try {
+      const res = await axios.post('http://localhost:5000/api/execute',
+        { code, language_id: LANG_IDS[lang], stdin: '' },
+        { headers: authHeader }
+      )
+      setOutput(res.data)
+    } catch {
+      setOutput({ status: 'Error', stderr: 'Execution failed. Check backend.' })
+    } finally { setRunning(false) }
+  }
+
   const handleSubmit = async () => {
-    setOutput('🎉 Accepted! Runtime: 12ms | Memory: 8.2MB')
-    const res = await axios.post(`http://localhost:5000/user/${USER_ID}/solve/${id}`)
-    setSolved(true)
-    if (res.data.newBadges?.length) setNewBadges(res.data.newBadges)
+    setRunning(true)
+    setOutput(null)
+    try {
+      const execRes = await axios.post('http://localhost:5000/api/execute',
+        { code, language_id: LANG_IDS[lang], stdin: '' },
+        { headers: authHeader }
+      )
+      setOutput(execRes.data)
+
+      if (user && execRes.data.statusId === 3) {
+        // Save submission
+        await axios.post('http://localhost:5000/api/submission', {
+          problemId: id, code, language: lang,
+          status: execRes.data.status,
+          runtime: execRes.data.time,
+          memory: execRes.data.memory,
+        }, { headers: authHeader })
+        // Mark solved
+        const solveRes = await axios.post(`http://localhost:5000/user/solve/${id}`, {}, { headers: authHeader })
+        setSolved(true)
+        if (solveRes.data.newBadges?.length) setNewBadges(solveRes.data.newBadges)
+      }
+    } catch {
+      setOutput({ status: 'Error', stderr: 'Submission failed.' })
+    } finally { setRunning(false) }
   }
 
   const handleLang = (l) => { setLang(l); setCode(starterCode[l]) }
 
   if (loading) return (
-    <div className="pt-14 min-h-screen flex items-center justify-center">
+    <div className="pt-14 min-h-screen flex items-center justify-center bg-[#0d1117]">
       <div className="text-gray-400 animate-pulse text-sm">Loading problem...</div>
     </div>
   )
   if (!problem) return (
-    <div className="pt-14 min-h-screen flex items-center justify-center">
+    <div className="pt-14 min-h-screen flex items-center justify-center bg-[#0d1117]">
       <p className="text-gray-400">Problem not found. <span onClick={() => navigate('/problems')} className="text-cyan-400 cursor-pointer">Go back</span></p>
     </div>
   )
 
   return (
-    <div className="pt-14 h-screen flex overflow-hidden">
+    <div className="pt-14 h-screen flex overflow-hidden bg-[#0d1117]">
       {/* Left Panel */}
       <div className="w-2/5 border-r border-gray-800 flex flex-col overflow-hidden">
         {/* Tabs */}
-        <div className="flex border-b border-gray-800 bg-[#161b22]">
+        <div className="flex border-b border-gray-800 bg-[#161b22] overflow-x-auto">
           {['description', 'approach', 'complexity', 'notes', 'discussion'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-4 py-3 text-xs font-semibold capitalize transition ${
+              className={`px-3 py-3 text-xs font-semibold whitespace-nowrap transition ${
                 activeTab === tab ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-gray-400 hover:text-white'
               }`}>
               {tab === 'complexity' ? '⏱ Complexity' : tab === 'approach' ? '💡 Approach' : tab === 'notes' ? '📝 Notes' : tab === 'discussion' ? '💬 Discussion' : '📄 Description'}
             </button>
           ))}
-          {/* Bookmark button */}
           <button onClick={toggleBookmark}
-            className={`ml-auto px-4 py-3 text-lg transition ${bookmarked ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}`}
-            title={bookmarked ? 'Remove bookmark' : 'Bookmark'}>
-            {bookmarked ? '🔖' : '🔖'}
+            className={`ml-auto px-4 py-3 text-lg transition ${bookmarked ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-400'}`}>
+            🔖
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          {/* Description Tab */}
           {activeTab === 'description' && (
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -114,16 +163,12 @@ export default function ProblemDetail() {
                   {problem.difficulty}
                 </span>
               </div>
-
               <div className="flex gap-2 mb-4 flex-wrap">
                 {problem.tags?.map(t => (
                   <span key={t} className="text-xs bg-[#0d1117] text-gray-400 px-2 py-0.5 rounded-full border border-gray-800">{t}</span>
                 ))}
               </div>
-
               <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{problem.description}</p>
-
-              {/* Hint */}
               {problem.hint && (
                 <div className="mt-6 p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
                   <p className="text-yellow-400 text-xs font-semibold mb-1">💡 Hint</p>
@@ -133,163 +178,98 @@ export default function ProblemDetail() {
             </div>
           )}
 
-          {/* Approach Tab */}
           {activeTab === 'approach' && (
             <div>
               <h2 className="text-white font-bold mb-4">💡 How to Approach</h2>
               <div className="bg-[#0d1117] border border-gray-800 rounded-xl p-4 mb-4">
-                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
-                  {problem.approach || 'No approach available yet.'}
-                </p>
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{problem.approach || 'No approach available yet.'}</p>
               </div>
-
               <div className="mt-4 p-4 bg-cyan-400/5 border border-cyan-400/20 rounded-xl">
                 <p className="text-cyan-400 text-xs font-semibold mb-2">🧠 Key Concept</p>
                 <p className="text-gray-300 text-sm">{problem.hint}</p>
               </div>
-
-              <div className="mt-4">
-                <p className="text-gray-400 text-xs font-semibold mb-2 uppercase tracking-wide">Related Topics</p>
-                <div className="flex flex-wrap gap-2">
-                  {problem.tags?.map(t => (
-                    <span key={t} className="text-xs bg-cyan-400/10 text-cyan-400 px-3 py-1 rounded-full">{t}</span>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
-          {/* Complexity Tab */}
           {activeTab === 'complexity' && (
             <div>
               <h2 className="text-white font-bold mb-4">⏱ Time & Space Complexity</h2>
-
-              {/* Time Complexity */}
               <div className="bg-[#161b22] border border-gray-800 rounded-xl p-5 mb-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-cyan-400/10 rounded-lg flex items-center justify-center text-cyan-400 text-sm">⏱</div>
-                  <div>
-                    <p className="text-gray-400 text-xs">Time Complexity</p>
-                    <p className="text-cyan-400 font-bold text-xl font-mono">{problem.timeComplexity}</p>
-                  </div>
-                </div>
-                <p className="text-gray-400 text-xs leading-relaxed">
-                  {getTimeExplanation(problem.timeComplexity)}
-                </p>
+                <p className="text-gray-400 text-xs">Time Complexity</p>
+                <p className="text-cyan-400 font-bold text-xl font-mono">{problem.timeComplexity}</p>
               </div>
-
-              {/* Space Complexity */}
-              <div className="bg-[#161b22] border border-gray-800 rounded-xl p-5 mb-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-purple-400/10 rounded-lg flex items-center justify-center text-purple-400 text-sm">💾</div>
-                  <div>
-                    <p className="text-gray-400 text-xs">Space Complexity</p>
-                    <p className="text-purple-400 font-bold text-xl font-mono">{problem.spaceComplexity}</p>
-                  </div>
-                </div>
-                <p className="text-gray-400 text-xs leading-relaxed">
-                  {getSpaceExplanation(problem.spaceComplexity)}
-                </p>
-              </div>
-
-              {/* Complexity Cheatsheet */}
-              <div className="bg-[#0d1117] border border-gray-800 rounded-xl p-4">
-                <p className="text-white text-xs font-semibold mb-3 uppercase tracking-wide">📊 Big-O Cheatsheet</p>
-                <div className="space-y-2">
-                  {[
-                    { notation: 'O(1)', name: 'Constant', color: 'text-green-400', example: 'Array access, HashMap get' },
-                    { notation: 'O(log n)', name: 'Logarithmic', color: 'text-green-400', example: 'Binary Search' },
-                    { notation: 'O(n)', name: 'Linear', color: 'text-yellow-400', example: 'Single loop, Linear scan' },
-                    { notation: 'O(n log n)', name: 'Linearithmic', color: 'text-yellow-400', example: 'Merge Sort, Heap Sort' },
-                    { notation: 'O(n²)', name: 'Quadratic', color: 'text-orange-400', example: 'Nested loops, Bubble Sort' },
-                    { notation: 'O(2ⁿ)', name: 'Exponential', color: 'text-red-400', example: 'Recursion without memo' },
-                  ].map(c => (
-                    <div key={c.notation} className="flex items-center justify-between py-1.5 border-b border-gray-800/50 last:border-0">
-                      <div className="flex items-center gap-3">
-                        <span className={`font-mono text-sm font-bold w-20 ${c.color}`}>{c.notation}</span>
-                        <span className="text-gray-400 text-xs">{c.name}</span>
-                      </div>
-                      <span className="text-gray-600 text-xs">{c.example}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="bg-[#161b22] border border-gray-800 rounded-xl p-5">
+                <p className="text-gray-400 text-xs">Space Complexity</p>
+                <p className="text-purple-400 font-bold text-xl font-mono">{problem.spaceComplexity}</p>
               </div>
             </div>
           )}
-          {/* Notes Tab */}
+
           {activeTab === 'notes' && (
             <div>
               <h2 className="text-white font-bold mb-3">📝 My Notes</h2>
-              <p className="text-gray-400 text-xs mb-3">Write your approach, observations or reminders for this problem.</p>
-              <textarea
-                value={note}
-                onChange={e => setNote(e.target.value)}
+              {!user && <p className="text-yellow-400 text-xs mb-3">⚠️ Login to save notes</p>}
+              <textarea value={note} onChange={e => setNote(e.target.value)}
                 placeholder="Write your notes here..."
-                className="w-full h-48 bg-[#0d1117] border border-gray-700 rounded-xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 resize-none"
-              />
-              <button onClick={saveNote}
+                className="w-full h-48 bg-[#0d1117] border border-gray-700 rounded-xl p-4 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 resize-none" />
+              <button onClick={saveNote} disabled={!user}
                 className={`mt-3 w-full py-2 rounded-xl text-sm font-semibold transition ${
-                  noteSaved ? 'bg-green-400 text-black' : 'bg-cyan-400 text-black hover:bg-cyan-300'
+                  noteSaved ? 'bg-green-400 text-black' : 'bg-cyan-400 text-black hover:bg-cyan-300 disabled:opacity-40'
                 }`}>
                 {noteSaved ? '✅ Saved!' : '💾 Save Note'}
               </button>
             </div>
           )}
-          {/* Discussion Tab */}
-          {activeTab === 'discussion' && (
-            <Discussion problemId={id} />
-          )}
 
+          {activeTab === 'discussion' && <Discussion problemId={id} />}
         </div>
       </div>
 
-      {/* Discussion Section */}
-      <div className="w-2/5 border-r border-gray-800 overflow-y-auto px-5 pb-5" style={{display: activeTab === 'discussion' ? 'block' : 'none'}}>
-      </div>
-
-      {/* Right Panel - Editor */}
+      {/* Right Panel */}
       <div className="flex-1 flex flex-col bg-[#0d1117]">
-        {/* Editor Topbar */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800 bg-[#161b22]">
           <div className="flex gap-1">
             {['C++', 'Java', 'Python'].map(l => (
               <button key={l} onClick={() => handleLang(l)}
-                className={`px-3 py-1 rounded text-xs font-medium transition ${
-                  lang === l ? 'bg-cyan-400 text-black' : 'text-gray-400 hover:text-white'
-                }`}>
+                className={`px-3 py-1 rounded text-xs font-medium transition ${lang === l ? 'bg-cyan-400 text-black' : 'text-gray-400 hover:text-white'}`}>
                 {l}
               </button>
             ))}
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setOutput('✅ Compiled successfully! Test cases: 3/3 passed')}
-              className="px-4 py-1.5 text-xs font-semibold border border-gray-600 text-white rounded-lg hover:border-gray-400 transition">
-              ▶ Run
+            <button onClick={handleRun} disabled={running}
+              className="px-4 py-1.5 text-xs font-semibold border border-gray-600 text-white rounded-lg hover:border-gray-400 transition disabled:opacity-50">
+              {running ? '⏳ Running...' : '▶ Run'}
             </button>
-            <button onClick={handleSubmit}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${solved ? 'bg-green-400 text-black' : 'bg-cyan-400 text-black hover:bg-cyan-300'}`}>
+            <button onClick={handleSubmit} disabled={running}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-50 ${solved ? 'bg-green-400 text-black' : 'bg-cyan-400 text-black hover:bg-cyan-300'}`}>
               {solved ? '✅ Solved!' : 'Submit'}
             </button>
           </div>
         </div>
 
-        {/* Code Editor */}
-        <textarea
-          value={code}
-          onChange={e => setCode(e.target.value)}
-          spellCheck={false}
+        <textarea value={code} onChange={e => setCode(e.target.value)} spellCheck={false}
           className="flex-1 bg-[#0d1117] text-green-300 font-mono text-sm p-5 resize-none focus:outline-none leading-relaxed"
-          style={{ tabSize: 2 }}
-        />
+          style={{ tabSize: 2 }} />
 
-        {/* Output */}
+        {/* Output Panel */}
         {output && (
-          <div className="border-t border-gray-800 bg-[#161b22] px-5 py-3">
-            <p className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Output</p>
-            <p className="text-sm text-white font-mono">{output}</p>
+          <div className="border-t border-gray-800 bg-[#161b22] px-5 py-3 max-h-40 overflow-y-auto">
+            <div className="flex items-center gap-3 mb-2">
+              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Output</p>
+              <span className={`text-xs font-bold ${STATUS_COLOR[output.status] || 'text-gray-400'}`}>
+                {output.status}
+              </span>
+              {output.time && <span className="text-xs text-gray-500">⏱ {output.time}s</span>}
+              {output.memory && <span className="text-xs text-gray-500">💾 {output.memory}KB</span>}
+            </div>
+            {output.stdout && <pre className="text-green-300 text-xs font-mono whitespace-pre-wrap">{output.stdout}</pre>}
+            {output.stderr && <pre className="text-red-400 text-xs font-mono whitespace-pre-wrap">{output.stderr}</pre>}
+            {output.compile_output && <pre className="text-orange-400 text-xs font-mono whitespace-pre-wrap">{output.compile_output}</pre>}
           </div>
         )}
       </div>
+
       <AIChatbot problemTitle={problem?.title} problemDescription={problem?.description} />
 
       {/* Badge Notification */}
@@ -310,25 +290,4 @@ export default function ProblemDetail() {
       )}
     </div>
   )
-}
-
-function getTimeExplanation(tc) {
-  if (!tc) return ''
-  if (tc.includes('O(1)')) return 'Constant time — does not depend on input size. Fastest possible.'
-  if (tc.includes('O(log n)')) return 'Logarithmic — input is halved each step. Very efficient for large inputs.'
-  if (tc.includes('O(n log n)')) return 'Linearithmic — typical of efficient sorting algorithms like merge sort.'
-  if (tc.includes('O(n²)')) return 'Quadratic — nested loops over input. Acceptable for n ≤ 10³.'
-  if (tc.includes('O(n)')) return 'Linear — single pass through input. Scales well with input size.'
-  if (tc.includes('O(2')) return 'Exponential — doubles with each input. Only feasible for very small n.'
-  return 'Complexity depends on input size n.'
-}
-
-function getSpaceExplanation(sc) {
-  if (!sc) return ''
-  if (sc.includes('O(1)')) return 'Constant space — uses fixed memory regardless of input size. Most optimal.'
-  if (sc.includes('O(log n)')) return 'Logarithmic space — typically recursion stack depth in divide & conquer.'
-  if (sc.includes('O(n)')) return 'Linear space — stores data proportional to input size (arrays, hashmaps).'
-  if (sc.includes('O(h)')) return 'O(h) where h = tree height. O(log n) for balanced, O(n) for skewed tree.'
-  if (sc.includes('O(m')) return 'Depends on both input dimensions m and n.'
-  return 'Space used grows with input size.'
 }

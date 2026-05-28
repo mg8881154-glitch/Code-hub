@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-
-const USER_ID = "kinetic_dev"
+import { useAuth } from '../context/AuthContext'
 
 const diffStyle = {
   Easy: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -13,15 +12,22 @@ const diffStyle = {
 export default function Bookmarks() {
   const [bookmarks, setBookmarks] = useState([])
   const [loading, setLoading] = useState(true)
+  const { token } = useAuth()
+  const navigate = useNavigate()
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/user/${USER_ID}/bookmarks`)
+    if (!token) return
+    axios.get('http://localhost:5000/user/bookmarks', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(r => setBookmarks(r.data))
       .finally(() => setLoading(false))
-  }, [])
+  }, [token])
 
   const removeBookmark = async (id) => {
-    await axios.post(`http://localhost:5000/user/${USER_ID}/bookmark/${id}`)
+    await axios.post(`http://localhost:5000/user/bookmark/${id}`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
     setBookmarks(prev => prev.filter(b => b._id !== id))
   }
 

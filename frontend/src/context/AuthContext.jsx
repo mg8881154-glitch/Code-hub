@@ -5,6 +5,7 @@ const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -12,6 +13,7 @@ export function AuthProvider({ children }) {
     const savedUser = localStorage.getItem('user')
     if (token && savedUser) {
       setUser(JSON.parse(savedUser))
+      setToken(token)
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
     }
     setLoading(false)
@@ -22,6 +24,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('token', res.data.token)
     localStorage.setItem('user', JSON.stringify(res.data.user))
     axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`
+    setToken(res.data.token)
     setUser(res.data.user)
     return res.data
   }
@@ -31,6 +34,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('token', res.data.token)
     localStorage.setItem('user', JSON.stringify(res.data.user))
     axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`
+    setToken(res.data.token)
     setUser(res.data.user)
     return res.data
   }
@@ -40,10 +44,11 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user')
     delete axios.defaults.headers.common['Authorization']
     setUser(null)
+    setToken(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signup, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, signup, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

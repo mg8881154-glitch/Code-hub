@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { useAuth } from '../context/AuthContext'
 
 const submissions = [
   { title: 'Two Sum', lang: 'C++', status: 'Accepted', time: '12ms', mem: '8.2MB', when: '2 hours ago', ok: true },
@@ -31,18 +32,33 @@ const diffStyle = {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { user, token } = useAuth()
   const [daily, setDaily] = useState(null)
   const [dailyLoading, setDailyLoading] = useState(true)
   const [solved, setSolved] = useState(false)
   const [timeLeft, setTimeLeft] = useState('')
+  const [realStats, setRealStats] = useState(null)
+  const [recentSubs, setRecentSubs] = useState([])
 
-  // Fetch daily challenge
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {}
+
   useEffect(() => {
+    // Fetch daily challenge
     axios.get('http://localhost:5000/daily-challenge')
       .then(r => setDaily(r.data))
       .catch(() => setDaily(null))
       .finally(() => setDailyLoading(false))
-  }, [])
+
+    // Fetch real user stats
+    if (token) {
+      axios.get('http://localhost:5000/user/stats', { headers: authHeader })
+        .then(r => setRealStats(r.data))
+        .catch(() => {})
+      axios.get('http://localhost:5000/api/submissions/me', { headers: authHeader })
+        .then(r => setRecentSubs(r.data))
+        .catch(() => {})
+    }
+  }, [token])
 
   // Countdown to midnight
   useEffect(() => {
@@ -74,9 +90,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats — real data if logged in */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-          {stats.map(s => (
+          {[
+            { label: 'Total Solved', value: realStats?.solved ?? stats[0].value, sub: 'problems', color: 'text-cyan-400' },
+            { label: 'Easy', value: realStats?.easyCount ?? stats[1].value, sub: 'solved', color: 'text-green-400' },
+            { label: 'Medium', value: realStats?.mediumCount ?? stats[2].value, sub: 'solved', color: 'text-yellow-400' },
+            { label: 'Hard', value: realStats?.hardCount ?? stats[3].value, sub: 'solved', color: 'text-red-400' },
+          ].map(s => (
             <div key={s.label} className="bg-[#161b22] border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition">
               <p className="text-gray-400 text-xs mb-2">{s.label}</p>
               <p className={`text-4xl font-black ${s.color}`}>{s.value}</p>
@@ -90,20 +111,24 @@ export default function Dashboard() {
           <div className="md:col-span-2 bg-[#161b22] border border-gray-800 rounded-2xl p-6">
             <h2 className="text-white font-semibold mb-5">Recent Submissions</h2>
             <div className="space-y-3">
-              {submissions.map((s, i) => (
+              {(recentSubs.length > 0 ? recentSubs : submissions).map((s, i) => (
                 <div key={i} className="flex items-center justify-between py-3 border-b border-gray-800/60 last:border-0">
                   <div className="flex items-center gap-3">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${s.ok ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'}`}>
-                      {s.ok ? '✓' : '✗'}
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
+                      (s.status === 'Accepted' || s.ok) ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'
+                    }`}>
+                      {(s.status === 'Accepted' || s.ok) ? '✓' : '✗'}
                     </div>
                     <div>
-                      <p className="text-white text-sm font-medium">{s.title}</p>
-                      <p className="text-gray-500 text-xs">{s.lang} · {s.time} · {s.mem}</p>
+                      <p className="text-white text-sm font-medium">{s.problemId?.title || s.title}</p>
+                      <p className="text-gray-500 text-xs">{s.language || s.lang} · {s.runtime || s.time} · {s.memory || s.mem}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-xs font-semibold ${s.ok ? 'text-green-400' : 'text-red-400'}`}>{s.status}</p>
-                    <p className="text-gray-600 text-xs">{s.when}</p>
+                    <p className={`text-xs font-semibold ${(s.status === 'Accepted' || s.ok) ? 'text-green-400' : 'text-red-400'}`}>
+                      {s.status || (s.ok ? 'Accepted' : 'Failed')}
+                    </p>
+                    <p className="text-gray-600 text-xs">{s.when || new Date(s.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
               ))}

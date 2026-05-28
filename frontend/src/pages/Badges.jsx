@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-
-const USER_ID = "kinetic_dev"
+import { useAuth } from '../context/AuthContext'
 
 export default function Badges() {
   const [data, setData] = useState({ badges: [], allBadges: [] })
   const [loading, setLoading] = useState(true)
+  const { token } = useAuth()
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/user/${USER_ID}/badges`)
+    if (!token) return
+    axios.get('http://localhost:5000/user/badges', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(r => setData(r.data))
       .finally(() => setLoading(false))
-  }, [])
+  }, [token])
 
   const earned = data.badges.map(b => b.id)
 
