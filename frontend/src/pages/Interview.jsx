@@ -1,9 +1,32 @@
 import { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
-import axios from 'axios'
+import { useLocation, Link } from 'react-router-dom'
+import {
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Play,
+  Square,
+  Send,
+  Sparkles,
+  RotateCcw,
+  CheckCircle2,
+  AlertTriangle,
+  Bot,
+  User,
+  Code2,
+  ChevronRight,
+  Lightbulb,
+  Award,
+  Layers,
+  Check,
+  X
+} from 'lucide-react'
+import api from '../api'
 import Editor from '@monaco-editor/react'
 import ReactMarkdown from 'react-markdown'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts'
+import { useTheme } from '../context/ThemeContext'
 
 // ── Starter Code ──
 const STARTER = {
@@ -16,10 +39,9 @@ const STARTER = {
 const LANG_MAP = { 'C++': 'cpp', Java: 'java', Python: 'python', JavaScript: 'javascript' }
 
 // ── Feedback Dashboard ──
-function FeedbackDashboard({ score, onRestart }) {
+function FeedbackDashboard({ score, onRestart, dark }) {
   const [showSolution, setShowSolution] = useState(false)
 
-  // Fix 1: Shorter labels to prevent overlap
   const radarData = [
     { subject: 'Problem', A: score.problemSolving },
     { subject: 'Coding', A: score.codingStyle },
@@ -29,53 +51,58 @@ function FeedbackDashboard({ score, onRestart }) {
   ]
 
   return (
-    <div className="min-h-screen bg-[#0d1117] pt-14 pb-10">
-      <div className="max-w-5xl mx-auto px-6 py-8">
+    <div className={`min-h-screen pt-16 pb-12 transition-colors duration-200 ${
+      dark ? 'bg-[#090d16] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
+    }`}>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="text-center mb-10">
-          {/* Fix 4: HIRE badge glowing animation */}
-          <style>{`
-            @keyframes hireGlow {
-              0%, 100% { box-shadow: 0 0 15px rgba(74,222,128,0.4), 0 0 30px rgba(74,222,128,0.15); }
-              50% { box-shadow: 0 0 35px rgba(74,222,128,0.7), 0 0 70px rgba(74,222,128,0.3); }
-            }
-          `}</style>
-          <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl text-2xl font-black mb-4 ${
+          <div className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-xl font-black mb-4 shadow-lg ${
             score.verdict === 'HIRE'
-              ? 'bg-green-400/10 border border-green-400/40 text-green-400'
-              : 'bg-red-400/10 border border-red-400/30 text-red-400'
-          }`}
-          style={score.verdict === 'HIRE' ? { animation: 'hireGlow 2s ease-in-out infinite' } : {}}>
-            {score.verdict === 'HIRE' ? '✅ HIRE' : '❌ NO HIRE'}
+              ? 'bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 shadow-emerald-500/10'
+              : 'bg-rose-500/10 border border-rose-500/30 text-rose-400 shadow-rose-500/10'
+          }`}>
+            {score.verdict === 'HIRE' ? <CheckCircle2 className="w-6 h-6 text-emerald-400" /> : <AlertTriangle className="w-6 h-6 text-rose-400" />}
+            <span>{score.verdict === 'HIRE' ? 'HIRE RECOMMENDATION' : 'NEEDS PRACTICE'}</span>
           </div>
-          <h1 className="text-3xl font-black text-white mb-2">Interview Feedback Report</h1>
-          <p className="text-gray-400 text-sm">Interviewed by Alex · Google · {new Date().toLocaleDateString()}</p>
+          <h1 className="text-3xl sm:text-4xl font-black mb-2">Technical Interview Feedback Report</h1>
+          <p className={`text-xs sm:text-sm ${dark ? 'text-slate-400' : 'text-slate-600'}`}>
+            Evaluated by Alex · Senior Staff Engineer (Google) · {new Date().toLocaleDateString()}
+          </p>
         </div>
 
         {/* Final Score */}
-        <div className="bg-gradient-to-r from-cyan-400/10 to-blue-500/10 border border-cyan-400/20 rounded-3xl p-8 text-center mb-8">
-          <p className="text-gray-400 text-sm mb-2 uppercase tracking-widest">Final Score</p>
-          <div className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
+        <div className={`rounded-3xl p-8 text-center mb-8 border backdrop-blur-xl shadow-xl ${
+          dark ? 'bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 border-cyan-500/30' : 'bg-white border-slate-200'
+        }`}>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Composite Score</p>
+          <div className="text-7xl sm:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-2">
             {score.total}
           </div>
-          <p className="text-gray-400">out of 100</p>
-          <div className="mt-4 h-3 bg-gray-800 rounded-full max-w-md mx-auto overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-1000"
-              style={{ width: `${score.total}%` }} />
+          <p className={`text-xs font-semibold ${dark ? 'text-slate-400' : 'text-slate-500'}`}>out of 100 possible points</p>
+          <div className={`mt-5 h-3 rounded-full max-w-md mx-auto overflow-hidden ${dark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+            <div
+              className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-full transition-all duration-1000"
+              style={{ width: `${score.total}%` }}
+            />
           </div>
         </div>
 
         {/* Radar Chart + Pillars */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Fix 1: outerRadius reduced + shorter labels = no overlap */}
-          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4 text-center">📊 Performance Radar</h2>
+          <div className={`p-6 rounded-3xl border shadow-sm ${
+            dark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <h2 className="font-bold text-sm mb-4 text-center flex items-center justify-center gap-2">
+              <Award className="w-4 h-4 text-cyan-400" />
+              <span>Skill Performance Radar</span>
+            </h2>
             <ResponsiveContainer width="100%" height={280}>
               <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="62%">
-                <PolarGrid stroke="#1f2937" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 12, fontWeight: 500 }} tickLine={false} />
-                <Radar name="Score" dataKey="A" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.25} strokeWidth={2.5} />
-                <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #374151', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                <PolarGrid stroke={dark ? '#1e293b' : '#e2e8f0'} />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} tickLine={false} />
+                <Radar name="Score" dataKey="A" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.25} strokeWidth={2.5} />
+                <Tooltip contentStyle={{ background: dark ? '#0f172a' : '#ffffff', border: '1px solid #334155', borderRadius: 12, color: dark ? '#fff' : '#000', fontSize: 12 }}
                   formatter={(v) => [`${v}/100`, 'Score']} />
               </RadarChart>
             </ResponsiveContainer>
@@ -84,19 +111,21 @@ function FeedbackDashboard({ score, onRestart }) {
           {/* 3 Pillars */}
           <div className="space-y-4">
             {[
-              { label: 'Technical', icon: '⚙️', val: score.technical, bar: 'bg-cyan-400', txt: 'text-cyan-400', feedback: score.technicalFeedback },
-              { label: 'Communication', icon: '🗣', val: score.communication, bar: 'bg-purple-400', txt: 'text-purple-400', feedback: score.communicationFeedback },
-              { label: 'Logical Reasoning', icon: '🧠', val: score.logical, bar: 'bg-green-400', txt: 'text-green-400', feedback: score.logicalFeedback },
+              { label: 'Technical Execution', val: score.technical, bar: 'bg-cyan-400', txt: 'text-cyan-400', feedback: score.technicalFeedback },
+              { label: 'Communication Clarity', val: score.communication, bar: 'bg-purple-400', txt: 'text-purple-400', feedback: score.communicationFeedback },
+              { label: 'Logical Decomposition', val: score.logical, bar: 'bg-emerald-400', txt: 'text-emerald-400', feedback: score.logicalFeedback },
             ].map(p => (
-              <div key={p.label} className="bg-[#161b22] border border-gray-800 rounded-2xl p-5">
+              <div key={p.label} className={`p-5 rounded-3xl border shadow-sm ${
+                dark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-semibold text-sm">{p.icon} {p.label}</span>
-                  <span className={`text-lg font-black ${p.txt}`}>{p.val}/100</span>
+                  <span className="font-bold text-xs">{p.label}</span>
+                  <span className={`text-base font-black ${p.txt}`}>{p.val}/100</span>
                 </div>
-                <div className="h-1.5 bg-gray-800 rounded-full mb-2">
+                <div className={`h-1.5 rounded-full mb-2 ${dark ? 'bg-slate-800' : 'bg-slate-100'}`}>
                   <div className={`h-full ${p.bar} rounded-full`} style={{ width: `${p.val}%` }} />
                 </div>
-                <p className="text-gray-400 text-xs">{p.feedback}</p>
+                <p className={`text-xs ${dark ? 'text-slate-400' : 'text-slate-600'}`}>{p.feedback}</p>
               </div>
             ))}
           </div>
@@ -104,54 +133,70 @@ function FeedbackDashboard({ score, onRestart }) {
 
         {/* Strengths + Improvements */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4">💪 Key Strengths</h2>
+          <div className={`p-6 rounded-3xl border shadow-sm ${
+            dark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <h2 className="font-bold text-sm mb-4 text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Key Strengths</span>
+            </h2>
             <div className="space-y-3">
               {score.strengths.map((s, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <span className="w-6 h-6 bg-green-400/10 text-green-400 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
-                  <p className="text-gray-300 text-sm">{s}</p>
+                  <span className="w-5 h-5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✓</span>
+                  <p className={`text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{s}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4">🎯 Improvement Areas</h2>
+          <div className={`p-6 rounded-3xl border shadow-sm ${
+            dark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <h2 className="font-bold text-sm mb-4 text-amber-400 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Improvement Areas</span>
+            </h2>
             <div className="space-y-3">
               {score.improvements.map((s, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <span className="w-6 h-6 bg-yellow-400/10 text-yellow-400 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5">{i + 1}</span>
-                  <p className="text-gray-300 text-sm">{s}</p>
+                  <span className="w-5 h-5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
+                  <p className={`text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-700'}`}>{s}</p>
                 </div>
               ))}
             </div>
           </div>
         </div>
-        {/* Fix 2: Edge Cases table — high contrast colors */}
-        <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6 mb-8">
-          <h2 className="text-white font-semibold mb-4">⚠️ Edge Cases to Consider</h2>
+
+        {/* Edge Cases Table */}
+        <div className={`p-6 rounded-3xl border mb-8 shadow-sm ${
+          dark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200'
+        }`}>
+          <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
+            <Layers className="w-4 h-4 text-purple-400" />
+            <span>Edge Case Coverage</span>
+          </h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs text-left">
               <thead>
-                <tr className="border-b border-gray-800 text-gray-400 text-xs uppercase">
-                  <th className="text-left py-2 pr-4">Edge Case</th>
-                  <th className="text-left py-2 pr-4">Example</th>
-                  <th className="text-left py-2">Status</th>
+                <tr className={`border-b ${dark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'} uppercase`}>
+                  <th className="py-2.5 pr-4 font-semibold">Edge Case</th>
+                  <th className="py-2.5 pr-4 font-semibold">Example</th>
+                  <th className="py-2.5 font-semibold">Evaluation</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-800/40">
                 {score.edgeCases_table.map((ec, i) => (
-                  <tr key={i} className="border-b border-gray-800/50">
-                    <td className="py-3 pr-4 text-gray-300">{ec.case}</td>
-                    <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{ec.example}</td>
+                  <tr key={i}>
+                    <td className="py-3 pr-4 font-semibold">{ec.case}</td>
+                    <td className="py-3 pr-4 text-slate-400 font-mono text-xs">{ec.example}</td>
                     <td className="py-3">
                       {ec.handled ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/40">
-                          ✓ Handled
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                          <Check className="w-3 h-3" /> Handled
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/40">
-                          ✗ Missed
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                          <X className="w-3 h-3" /> Missed
                         </span>
                       )}
                     </td>
@@ -162,23 +207,40 @@ function FeedbackDashboard({ score, onRestart }) {
           </div>
         </div>
 
-        {/* Fix 3: Two buttons — Start New + View Suggested Solution */}
-        <div className="flex items-center justify-center gap-4">
-          <button onClick={onRestart}
-            className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-10 py-3.5 rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-400/25">
-            🔄 Start New Interview
+        {/* Buttons */}
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <button
+            onClick={onRestart}
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-cyan-500/25 hover:opacity-95 transition flex items-center gap-2 text-xs"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>Start New Interview</span>
           </button>
-          <button onClick={() => setShowSolution(s => !s)}
-            className="border border-cyan-400/40 text-cyan-400 font-semibold px-8 py-3.5 rounded-xl hover:bg-cyan-400/10 hover:border-cyan-400 transition">
-            💡 {showSolution ? 'Hide' : 'View'} Suggested Solution
+          <button
+            onClick={() => setShowSolution(s => !s)}
+            className={`border font-semibold px-6 py-3.5 rounded-xl transition flex items-center gap-2 text-xs ${
+              dark
+                ? 'border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10'
+                : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+            }`}
+          >
+            <Lightbulb className="w-4 h-4" />
+            <span>{showSolution ? 'Hide Solution' : 'View Canonical Solution'}</span>
           </button>
         </div>
 
         {/* Suggested Solution Panel */}
         {showSolution && (
-          <div className="mt-6 bg-[#161b22] border border-cyan-400/20 rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-3">💡 Suggested Solution</h2>
-            <pre className="bg-[#0d1117] rounded-xl p-4 text-green-300 text-sm font-mono overflow-x-auto leading-relaxed">{`// Optimal O(n) solution using HashMap
+          <div className={`mt-6 rounded-3xl border p-6 ${
+            dark ? 'bg-slate-900 border-cyan-500/30' : 'bg-white border-slate-300 shadow-lg'
+          }`}>
+            <h2 className="font-bold text-sm mb-3 flex items-center gap-2 text-emerald-400">
+              <Code2 className="w-4 h-4" />
+              <span>Optimal Canonical Implementation</span>
+            </h2>
+            <pre className={`p-4 rounded-2xl text-xs font-mono overflow-x-auto leading-relaxed ${
+              dark ? 'bg-[#090d16] text-emerald-300' : 'bg-slate-900 text-emerald-300'
+            }`}>{`// Optimal O(n) Single-Pass Hash Map Solution
 function twoSum(nums, target) {
   const map = new Map();
   for (let i = 0; i < nums.length; i++) {
@@ -188,9 +250,9 @@ function twoSum(nums, target) {
     }
     map.set(nums[i], i);
   }
-  return []; // No solution found
+  return []; // No pair found
 }
-// Time: O(n) | Space: O(n)`}</pre>
+// Time Complexity: O(n) | Space Complexity: O(n)`}</pre>
           </div>
         )}
       </div>
@@ -201,6 +263,7 @@ function twoSum(nums, target) {
 // ── Main Interview Component ──
 export default function Interview() {
   const location = useLocation()
+  const { dark } = useTheme()
   const problem = location.state?.problem || null
 
   const [history, setHistory] = useState([])
@@ -236,7 +299,7 @@ export default function Interview() {
     window.speechSynthesis.cancel()
     const clean = text.replace(/[*#`_]/g, '').slice(0, 400)
     const u = new SpeechSynthesisUtterance(clean)
-    u.lang = 'en-US'; u.rate = 0.9; u.pitch = 1
+    u.lang = 'en-US'; u.rate = 0.95; u.pitch = 1
     const voices = window.speechSynthesis.getVoices()
     const v = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'))
     if (v) u.voice = v
@@ -248,7 +311,7 @@ export default function Interview() {
   const toggleListen = () => {
     if (listening) { recognitionRef.current?.stop(); setListening(false); return }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Use Chrome for voice input'); return }
+    if (!SR) { alert('Use Google Chrome for voice interaction.'); return }
     const r = new SR()
     r.lang = 'en-US'; r.interimResults = false
     r.onstart = () => setListening(true)
@@ -260,7 +323,7 @@ export default function Interview() {
   const startInterview = async () => {
     setStarted(true); setLoading(true)
     try {
-      const res = await axios.post('http://localhost:5000/ai/interview', {
+      const res = await api.post('/ai/interview', {
         message: "Start the interview. Greet me as Alex from Google and introduce the problem.",
         history: [], problem
       })
@@ -278,7 +341,7 @@ export default function Interview() {
     setHistory(newHistory)
     setLoading(true)
     try {
-      const res = await axios.post('http://localhost:5000/ai/interview', {
+      const res = await api.post('/ai/interview', {
         message: userMsg, history: newHistory.slice(-12), problem
       })
       const reply = res.data.reply
@@ -295,145 +358,175 @@ export default function Interview() {
   const endInterview = () => {
     window.speechSynthesis.cancel()
     setFeedback({
-      total: 72,
+      total: 82,
       verdict: 'HIRE',
-      technical: 75, technicalFeedback: 'Good use of HashMap for O(n) solution. Edge case handling was adequate.',
-      communication: 70, communicationFeedback: 'Clear explanation of approach. Could improve by asking more clarifying questions upfront.',
-      logical: 72, logicalFeedback: 'Correctly identified the optimal approach after initial hint. Good problem decomposition.',
-      problemSolving: 75, codingStyle: 68, optimization: 72, edgeCases: 65,
+      technical: 85, technicalFeedback: 'Excellent Hash Map strategy with O(n) runtime and minimal space allocation.',
+      communication: 78, communicationFeedback: 'Explained intuition clearly. In future sessions, proactively clarify input bounds and constraints upfront.',
+      logical: 84, logicalFeedback: 'Accurately handled algorithm structure and identified time/space tradeoffs.',
+      problemSolving: 85, codingStyle: 80, optimization: 82, edgeCases: 76,
       strengths: [
-        'Correctly identified HashMap as the optimal data structure',
-        'Explained time complexity O(n) clearly after prompting',
-        'Handled the basic test case correctly in code',
+        'Optimal lookup data structure identified immediately',
+        'Clean variable naming and linear loop construct',
+        'Accurately described O(n) time complexity',
       ],
       improvements: [
-        'Ask clarifying questions proactively — e.g., "Can there be duplicate values?" before starting',
-        'Consider edge cases like empty array or no valid pair before coding',
+        'Ask about edge cases like empty array or negative numbers earlier',
+        'State memory tradeoffs before writing code',
       ],
       edgeCases_table: [
-        { case: 'Empty array', example: 'nums = []', handled: false },
-        { case: 'Single element', example: 'nums = [5]', handled: false },
-        { case: 'Duplicate values', example: 'nums = [3,3], target=6', handled: true },
-        { case: 'Negative numbers', example: 'nums = [-1,2], target=1', handled: true },
-        { case: 'No valid pair', example: 'nums = [1,2], target=10', handled: false },
+        { case: 'Empty array input', example: 'nums = []', handled: true },
+        { case: 'Single element input', example: 'nums = [5]', handled: true },
+        { case: 'Duplicate elements', example: 'nums = [3,3], target=6', handled: true },
+        { case: 'Negative integers', example: 'nums = [-1,2], target=1', handled: true },
+        { case: 'No solution matching pair', example: 'nums = [1,2], target=10', handled: true },
       ]
     })
   }
 
-  if (feedback) return <FeedbackDashboard score={feedback} onRestart={() => { setFeedback(null); setStarted(false); setHistory([]) }} />
+  if (feedback) return <FeedbackDashboard score={feedback} onRestart={() => { setFeedback(null); setStarted(false); setHistory([]) }} dark={dark} />
 
   return (
-    <div className="pt-14 h-screen bg-[#0d1117] flex flex-col overflow-hidden">
-      {/* Fix 4: Confirmation Modal */}
+    <div className={`pt-16 h-screen flex flex-col overflow-hidden transition-colors duration-200 ${
+      dark ? 'bg-[#090d16] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
+    }`}>
+      {/* End Modal */}
       {showEndConfirm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-[#161b22] border border-gray-700 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
-            <div className="text-4xl text-center mb-4">⚠️</div>
-            <h3 className="text-white font-bold text-lg text-center mb-2">End Interview?</h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
-              Are you sure you want to end the session? Your feedback report will be generated.
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className={`rounded-3xl p-8 max-w-sm w-full border shadow-2xl ${
+            dark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'
+          }`}>
+            <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+            <h3 className="font-bold text-lg text-center mb-2">Conclude Interview?</h3>
+            <p className={`text-xs text-center mb-6 leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-600'}`}>
+              Are you sure you want to end this interview session? Your final performance report and radar chart will be generated.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setShowEndConfirm(false)}
-                className="flex-1 border border-gray-700 text-gray-300 font-semibold py-2.5 rounded-xl hover:border-gray-500 hover:text-white transition text-sm">
-                Continue Interview
+              <button
+                onClick={() => setShowEndConfirm(false)}
+                className={`flex-1 border font-semibold py-2.5 rounded-xl text-xs transition ${
+                  dark ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                Continue
               </button>
-              <button onClick={() => { setShowEndConfirm(false); endInterview() }}
-                className="flex-1 bg-red-500 text-white font-bold py-2.5 rounded-xl hover:bg-red-400 transition text-sm">
-                End & Get Report
+              <button
+                onClick={() => { setShowEndConfirm(false); endInterview() }}
+                className="flex-1 bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs hover:bg-rose-600 shadow-md shadow-rose-500/20"
+              >
+                End & Report
               </button>
             </div>
           </div>
         </div>
       )}
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-2.5 bg-[#161b22] border-b border-gray-800 flex-shrink-0">
+
+      {/* Top Header Bar */}
+      <div className={`flex items-center justify-between px-6 py-3 border-b flex-shrink-0 ${
+        dark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
         <div className="flex items-center gap-3">
-          <span className="text-lg">🎙</span>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-purple-500/20">
+            <Bot className="w-4 h-4" />
+          </div>
           <div>
-            <p className="text-white text-sm font-semibold">AI Mock Interview — Alex (Google)</p>
-            <p className="text-gray-500 text-xs">{problem ? `${problem.title} · ${problem.difficulty}` : 'General DSA'}</p>
+            <p className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+              <span>Alex</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Google Staff AI</span>
+            </p>
+            <p className={`text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+              {problem ? `${problem.title} · ${problem.difficulty}` : 'General DSA & Algorithmic Design'}
+            </p>
           </div>
         </div>
+        
         <div className="flex items-center gap-3">
           {started && (
-            <span className={`text-xs px-3 py-1 rounded-full ${
-              speaking ? 'bg-green-400/10 text-green-400 animate-pulse' :
-              listening ? 'bg-red-400/10 text-red-400 animate-pulse' :
-              'bg-gray-800 text-gray-400'
+            <span className={`text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1.5 ${
+              speaking ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 animate-pulse' :
+              listening ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 animate-pulse' :
+              'bg-slate-800 text-slate-400'
             }`}>
-              {speaking ? '🔊 Alex Speaking' : listening ? '🎤 Listening' : '● Live'}
+              {speaking ? <Volume2 className="w-3 h-3" /> : listening ? <Mic className="w-3 h-3" /> : <Sparkles className="w-3 h-3 text-cyan-400" />}
+              <span>{speaking ? 'Alex Speaking' : listening ? 'Listening to You...' : 'Session Active'}</span>
             </span>
           )}
           {started && (
-            <button onClick={() => setShowEndConfirm(true)}
-              className="text-xs border border-red-400/30 text-red-400 px-4 py-1.5 rounded-lg hover:bg-red-400/10 transition">
-              End Interview
+            <button
+              onClick={() => setShowEndConfirm(true)}
+              className="text-xs font-bold border border-rose-500/40 text-rose-400 px-3.5 py-1.5 rounded-xl hover:bg-rose-500/10 transition"
+            >
+              End Session
             </button>
           )}
         </div>
       </div>
 
       {!started ? (
-        /* Start Screen */
-        <div className="flex-1 flex items-center justify-center">
-          <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-10 text-center max-w-lg">
-            <div className="text-6xl mb-4">👨‍💼</div>
-            <h2 className="text-white font-black text-2xl mb-2">Meet Alex</h2>
-            <p className="text-cyan-400 text-sm mb-4">Senior Engineer · Google · 10+ years</p>
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-              Alex will conduct a realistic technical interview. Explain your approach before coding, handle edge cases, and submit your solution.
+        /* Welcome Lobby Screen */
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className={`p-8 sm:p-10 rounded-3xl border max-w-lg w-full text-center shadow-2xl backdrop-blur-xl ${
+            dark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white text-2xl mx-auto mb-4 shadow-lg shadow-purple-500/25">
+              <Bot className="w-8 h-8" />
+            </div>
+            <h2 className="font-black text-2xl mb-1">Meet Alex</h2>
+            <p className="text-cyan-400 font-bold text-xs mb-4">Senior Technical Interviewer · Google Tech Lead</p>
+            <p className={`text-xs leading-relaxed mb-6 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>
+              Alex evaluates real-time DSA discussions. Clarify constraints, explain intuition and time complexity first before writing and submitting code.
             </p>
+
             {problem && (
-              <div className="bg-[#0d1117] border border-gray-800 rounded-xl p-4 mb-6 text-left">
-                <p className="text-xs text-gray-500 mb-1">Today's Problem</p>
-                <p className="text-white font-semibold">{problem.title}</p>
-                <p className="text-gray-400 text-xs mt-1 line-clamp-2">{problem.description}</p>
+              <div className={`rounded-2xl p-4 mb-6 text-left border ${
+                dark ? 'bg-[#0d1322] border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Assigned Challenge</p>
+                <p className="font-bold text-sm text-cyan-400">{problem.title}</p>
+                <p className={`text-xs mt-1 line-clamp-2 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{problem.description}</p>
               </div>
             )}
-            <div className="flex flex-wrap justify-center gap-2 mb-6">
-              {['🎤 Voice Input', '🔊 AI Voice', '💡 Smart Hints', '📊 Feedback Report'].map(f => (
-                <span key={f} className="text-xs bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 px-3 py-1 rounded-full">{f}</span>
-              ))}
-            </div>
-            <button onClick={startInterview}
-              className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-10 py-3.5 rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-400/25 w-full">
-              Start Interview with Alex 🚀
+
+            <button
+              onClick={startInterview}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all text-sm flex items-center justify-center gap-2"
+            >
+              <span>Begin Technical Interview</span>
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       ) : (
         /* Two Column Layout */
         <div className="flex-1 flex overflow-hidden">
-          {/* LEFT: Chat (40%) */}
-          <div className="w-[40%] flex flex-col border-r border-gray-800">
-            {/* Messages */}
+          {/* LEFT: Conversation Pane (42%) */}
+          <div className={`w-[42%] flex flex-col border-r ${dark ? 'border-slate-800 bg-[#090d16]' : 'border-slate-200 bg-white'}`}>
+            {/* Message Stream */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {history.map((msg, i) => (
                 <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${
+                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs flex-shrink-0 ${
                     msg.role === 'user'
-                      ? 'bg-gradient-to-br from-cyan-400 to-blue-500 text-black font-bold'
-                      : 'bg-[#0d1117] border border-gray-700 text-base'
+                      ? 'bg-gradient-to-tr from-cyan-400 to-blue-500 text-white font-bold'
+                      : 'bg-gradient-to-tr from-purple-500 to-indigo-600 text-white'
                   }`}>
-                    {msg.role === 'user' ? '👤' : '👨‍💼'}
+                    {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                   </div>
-                  {/* Fix 2: Markdown rendering in chat bubbles */}
-                  <div className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  <div className={`max-w-[84%] px-4 py-3 rounded-2xl text-xs leading-relaxed shadow-sm ${
                     msg.role === 'user'
-                      ? 'bg-gradient-to-br from-cyan-400/20 to-blue-500/20 border border-cyan-400/20 text-white rounded-tr-sm'
-                      : 'bg-[#0d1117] border border-gray-800 text-gray-200 rounded-tl-sm'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-tr-none'
+                      : dark
+                      ? 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none'
+                      : 'bg-slate-100 border border-slate-200 text-slate-800 rounded-tl-none'
                   }`}>
                     {msg.role === 'assistant' ? (
                       <ReactMarkdown
                         components={{
                           code: ({ inline, children }) => inline
-                            ? <code className="bg-gray-800 text-cyan-300 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
-                            : <pre className="bg-gray-900 border border-gray-700 rounded-lg p-3 mt-2 overflow-x-auto"><code className="text-green-300 text-xs font-mono">{children}</code></pre>,
-                          strong: ({ children }) => <strong className="text-white font-bold">{children}</strong>,
-                          p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
-                          ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mt-1">{children}</ul>,
-                          li: ({ children }) => <li className="text-gray-300">{children}</li>,
+                            ? <code className="bg-slate-800 text-cyan-300 px-1 py-0.5 rounded font-mono">{children}</code>
+                            : <pre className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 mt-2 overflow-x-auto"><code className="text-emerald-300 font-mono">{children}</code></pre>,
+                          strong: ({ children }) => <strong className="font-bold text-cyan-300">{children}</strong>,
+                          p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-1">{children}</ul>,
                         }}
                       >
                         {msg.content}
@@ -441,118 +534,144 @@ export default function Interview() {
                     ) : (
                       msg.content
                     )}
-                    {msg.role === 'assistant' && (
-                      <button onClick={() => speak(msg.content)} className="block mt-1.5 text-xs text-gray-600 hover:text-cyan-400 transition">🔊 Replay</button>
-                    )}
                   </div>
                 </div>
               ))}
               {loading && (
                 <div className="flex gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-[#0d1117] border border-gray-700 flex items-center justify-center text-sm">👨‍💼</div>
-                  <div className="bg-[#0d1117] border border-gray-800 px-4 py-3 rounded-2xl rounded-tl-sm">
-                    <div className="flex gap-1">{[0,150,300].map(d => <span key={d} className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />)}</div>
+                  <div className="w-7 h-7 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div className={`px-4 py-3 rounded-2xl rounded-tl-none border ${
+                    dark ? 'bg-slate-900 border-slate-800' : 'bg-slate-100 border-slate-200'
+                  }`}>
+                    <div className="flex gap-1.5 items-center">
+                      <span className="text-xs text-slate-400 mr-1">Alex is analyzing</span>
+                      {[0, 150, 300].map(d => (
+                        <span key={d} className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
               <div ref={bottomRef} />
             </div>
 
-            {/* Quick replies */}
-            <div className="px-3 py-2 flex gap-1.5 overflow-x-auto border-t border-gray-800">
-              {["Clarify constraints?", "I'll use HashMap O(n)", "Time: O(n), Space: O(n)", "Need a hint", "I have submitted my code"].map(q => (
-                <button key={q} onClick={() => send(q)}
-                  className="text-xs text-gray-400 bg-[#0d1117] border border-gray-700 px-2.5 py-1.5 rounded-full whitespace-nowrap hover:border-cyan-400/50 hover:text-cyan-400 transition flex-shrink-0">
+            {/* Quick Prompt Suggestions */}
+            <div className={`px-3 py-2 flex gap-1.5 overflow-x-auto border-t ${
+              dark ? 'border-slate-800 bg-[#0d1322]' : 'border-slate-200 bg-slate-50'
+            }`}>
+              {["Clarify constraints?", "I'll use Hash Map O(n)", "Time: O(n), Space: O(n)", "Need a hint", "I submitted my code"].map(q => (
+                <button
+                  key={q}
+                  onClick={() => send(q)}
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap border transition-all flex-shrink-0 ${
+                    dark
+                      ? 'bg-slate-900 text-slate-400 border-slate-800 hover:border-cyan-400/50 hover:text-cyan-400'
+                      : 'bg-white text-slate-600 border-slate-200 hover:text-slate-900 shadow-sm'
+                  }`}
+                >
                   {q}
                 </button>
               ))}
             </div>
 
-            {/* Input */}
-            <div className="px-3 py-3 border-t border-gray-800 flex gap-2 items-end">
-              {/* Fix 3: Pulsing green Live indicator when listening */}
-              <div className="relative flex-shrink-0">
-                <button onClick={toggleListen}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition text-sm ${
-                    listening ? 'bg-red-400 text-white' : 'bg-[#0d1117] border border-gray-700 text-gray-400 hover:text-white'
-                  }`}>🎤</button>
-                {listening && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-[#0d1117] animate-pulse" />
-                )}
-              </div>
-              <textarea value={input} onChange={e => setInput(e.target.value)}
+            {/* Input Bar */}
+            <div className={`p-3 border-t flex gap-2 items-end ${
+              dark ? 'border-slate-800 bg-[#0d1322]/80' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <button
+                onClick={toggleListen}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
+                  listening
+                    ? 'bg-rose-500 text-white animate-pulse shadow-lg shadow-rose-500/30'
+                    : dark
+                    ? 'bg-slate-900 border border-slate-700 text-slate-400 hover:text-white'
+                    : 'bg-white border border-slate-300 text-slate-600 hover:text-black'
+                }`}
+              >
+                {listening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              </button>
+
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                placeholder={listening ? '🎤 Listening...' : 'Type your answer...'}
+                placeholder={listening ? 'Listening to speech...' : 'Type response to Alex...'}
                 rows={1}
-                className="flex-1 bg-[#0d1117] border border-gray-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 resize-none" />
-              <button onClick={() => send()} disabled={loading || !input.trim()}
-                className="w-9 h-9 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-black hover:opacity-90 transition disabled:opacity-30 flex-shrink-0">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                className={`flex-1 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none transition-all resize-none ${
+                  dark
+                    ? 'bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:border-cyan-400'
+                    : 'bg-white border border-slate-300 text-slate-900 placeholder-slate-400 focus:border-cyan-600'
+                }`}
+              />
+
+              <button
+                onClick={() => send()}
+                disabled={loading || !input.trim()}
+                className="w-10 h-10 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center text-white hover:opacity-95 transition disabled:opacity-30 flex-shrink-0 shadow-md shadow-cyan-500/20"
+              >
+                <Send className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* RIGHT: Monaco Editor (60%) */}
-          <div className="flex-1 flex flex-col bg-[#0d1117]">
+          {/* RIGHT: Monaco Editor (58%) */}
+          <div className="flex-1 flex flex-col">
             {/* Editor toolbar */}
-            <div className="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-gray-800 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <select value={lang} onChange={e => { setLang(e.target.value); setCode(STARTER[e.target.value]) }}
-                  className="bg-[#0d1117] border border-gray-700 text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-cyan-400">
+            <div className={`flex items-center justify-between px-4 py-2.5 border-b flex-shrink-0 ${
+              dark ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <select
+                  value={lang}
+                  onChange={e => { setLang(e.target.value); setCode(STARTER[e.target.value]) }}
+                  className={`border text-xs font-bold rounded-xl px-3 py-1.5 focus:outline-none ${
+                    dark ? 'bg-slate-900 border-slate-700 text-cyan-400' : 'bg-white border-slate-300 text-cyan-600'
+                  }`}
+                >
                   {Object.keys(STARTER).map(l => <option key={l}>{l}</option>)}
                 </select>
                 {!codeApproved && (
-                  <span className="text-xs text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-3 py-1 rounded-full">
-                    🔒 Explain approach first
+                  <span className="text-[11px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
+                    Explain approach to Alex first
                   </span>
                 )}
                 {codeApproved && (
-                  <span className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 px-3 py-1 rounded-full">
-                    ✅ Approach approved — start coding!
+                  <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Approach approved — code solution</span>
                   </span>
                 )}
               </div>
-              <button onClick={submitCode}
+
+              <button
+                onClick={submitCode}
                 disabled={!codeApproved}
-                className="bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-5 py-1.5 rounded-lg text-xs hover:opacity-90 transition disabled:opacity-30">
-                Submit Code →
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs hover:opacity-90 transition disabled:opacity-40 shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>Submit to Alex</span>
               </button>
             </div>
 
             {/* Monaco Editor */}
             <div className="flex-1 relative">
-              {/* Fix 1: Sidebar notification instead of blocking overlay */}
-              {!codeApproved && (
-                <div className="absolute top-3 right-3 z-10 bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-2 shadow-lg backdrop-blur-sm">
-                  <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse flex-shrink-0" />
-                  Explain approach to Alex first
-                </div>
-              )}
-              {codeApproved && (
-                <div className="absolute top-3 right-3 z-10 bg-green-400/10 border border-green-400/30 text-green-400 text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-2 shadow-lg">
-                  <span className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />
-                  Approach approved — code away!
-                </div>
-              )}
               <Editor
                 height="100%"
                 language={LANG_MAP[lang]}
                 value={code}
                 onChange={v => setCode(v || '')}
-                theme="vs-dark"
+                theme={dark ? 'vs-dark' : 'light'}
                 options={{
-                  fontSize: 14,
+                  fontSize: 13,
                   minimap: { enabled: false },
                   scrollBeyondLastLine: false,
                   lineNumbers: 'on',
                   roundedSelection: true,
                   padding: { top: 16 },
-                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                  fontLigatures: true,
-                  cursorBlinking: 'smooth',
-                  smoothScrolling: true,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  automaticLayout: true,
                 }}
               />
             </div>
@@ -562,3 +681,4 @@ export default function Interview() {
     </div>
   )
 }
+

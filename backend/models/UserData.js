@@ -9,6 +9,9 @@ const userDataSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
   }],
   solvedProblems: [{ type: mongoose.Schema.Types.ObjectId, ref: "Problem" }],
+  easyCount: { type: Number, default: 0 },
+  mediumCount: { type: Number, default: 0 },
+  hardCount: { type: Number, default: 0 },
   badges: [{
     id: String,
     name: String,

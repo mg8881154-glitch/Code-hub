@@ -1,4 +1,22 @@
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import {
+  Code2,
+  Home,
+  LayoutDashboard,
+  BarChart2,
+  Bookmark,
+  Award,
+  Mic,
+  Sun,
+  Moon,
+  LogOut,
+  Menu,
+  X,
+  Sparkles,
+  User as UserIcon,
+  Crown
+} from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
@@ -7,105 +25,202 @@ export default function Navbar() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { dark, toggle } = useTheme()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const links = [
-    { to: '/', label: 'Home' },
-    { to: '/problems', label: 'Problems' },
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/analytics', label: '📊 Analytics' },
-    { to: '/bookmarks', label: '🔖 Bookmarks' },
-    { to: '/badges', label: '🏅 Badges' },
-    { to: '/interview', label: '🎙 Interview' },
+    { to: '/', label: 'Home', icon: Home },
+    { to: '/problems', label: 'Problems', icon: Code2 },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/analytics', label: 'Analytics', icon: BarChart2 },
+    { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
+    { to: '/badges', label: 'Badges', icon: Award },
+    { to: '/interview', label: 'Mock AI', icon: Mic, badge: 'AI' },
   ]
 
-  const handleLogout = () => { logout(); navigate('/') }
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+    setMobileMenuOpen(false)
+  }
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 backdrop-blur border-b transition-colors ${
-      dark ? 'bg-[#0d1117]/90 border-gray-800' : 'bg-white/90 border-gray-200'
+    <nav className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b transition-colors duration-200 ${
+      dark
+        ? 'bg-[#090d16]/85 border-slate-800/80 shadow-lg shadow-black/20'
+        : 'bg-white/85 border-slate-200/90 shadow-sm'
     }`}>
-      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center text-black font-black text-xs shadow-lg shadow-cyan-400/30 group-hover:shadow-cyan-400/50 transition">
-            {'</>'}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        {/* Brand Logo */}
+        <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
+          <div className="w-9 h-9 bg-gradient-to-tr from-cyan-500 via-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-cyan-500/25 group-hover:scale-105 group-hover:shadow-cyan-500/40 transition-all duration-300">
+            <Code2 className="w-5 h-5 text-white stroke-[2.5]" />
           </div>
-          <span className="font-black text-xl tracking-tight">
-            <span className={dark ? 'text-white' : 'text-gray-900'}>Code</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Hub</span>
+          <span className="font-black text-xl tracking-tight flex items-center gap-1">
+            <span className={dark ? 'text-white' : 'text-slate-900'}>Code</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500">Hub</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 ml-1 hidden sm:inline-block">
+              PRO
+            </span>
           </span>
         </Link>
 
-        {/* Links */}
-        <div className="flex items-center gap-5 overflow-x-auto">
-          {links.map(l => (
-            <Link key={l.to} to={l.to}
-              className={`text-sm font-medium transition whitespace-nowrap ${
-                pathname === l.to
-                  ? 'text-cyan-500'
-                  : dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
-              }`}>
-              {l.label}
-            </Link>
-          ))}
+        {/* Desktop Navigation Links */}
+        <div className={`hidden lg:flex items-center gap-1 p-1 rounded-2xl border ${
+          dark ? 'bg-slate-900/60 border-slate-800/80' : 'bg-slate-100/80 border-slate-200/80'
+        }`}>
+          {links.map(l => {
+            const isActive = pathname === l.to
+            const IconComponent = l.icon
+            return (
+              <Link
+                key={l.to}
+                to={l.to}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 relative ${
+                  isActive
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/25'
+                    : dark
+                    ? 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <IconComponent className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <span>{l.label}</span>
+                {l.badge && (
+                  <span className={`text-[9px] font-bold px-1 rounded-full ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                  }`}>
+                    {l.badge}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
         </div>
 
-        {/* Right side: Theme toggle + Auth */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {/* 🌙 / ☀️ Toggle */}
-          <button onClick={toggle}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center transition border ${
+        {/* Right Action Tools: Theme & Auth Profile */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          {/* Theme Switcher Button */}
+          <button
+            onClick={toggle}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 border ${
               dark
-                ? 'bg-gray-800 border-gray-700 text-yellow-400 hover:bg-gray-700'
-                : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                ? 'bg-slate-900/80 border-slate-800 text-amber-400 hover:bg-slate-800 hover:border-amber-400/40'
+                : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
             }`}
-            title={dark ? 'Switch to Light mode' : 'Switch to Dark mode'}>
-            {dark ? (
-              // Sun icon
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm0 15a5 5 0 100-10 5 5 0 000 10zm7-5a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM3 12a1 1 0 011-1h1a1 1 0 110 2H4a1 1 0 01-1-1zm15.364-6.364a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM6.343 17.657a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM18.364 18.364a1 1 0 01-1.414 0l-.707-.707a1 1 0 011.414-1.414l.707.707a1 1 0 010 1.414zM5.636 5.636a1 1 0 011.414 0l.707.707A1 1 0 116.343 7.757l-.707-.707a1 1 0 010-1.414zM12 20a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z"/>
-              </svg>
-            ) : (
-              // Moon icon
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-              </svg>
-            )}
+            title={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
+
           {user ? (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-black font-black text-xs">
-                  {user.username?.[0]?.toUpperCase()}
+            <div className="flex items-center gap-2">
+              <Link
+                to="/dashboard"
+                className={`flex items-center gap-2 px-2.5 py-1 rounded-xl border transition-all ${
+                  dark ? 'bg-slate-900/80 border-slate-800 hover:border-cyan-500/40' : 'bg-slate-50 border-slate-200 hover:border-cyan-400'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                  {user.username?.[0]?.toUpperCase() || 'U'}
                 </div>
-                <div className="hidden md:block">
-                  <p className={`text-xs font-semibold ${dark ? 'text-white' : 'text-gray-900'}`}>{user.username}</p>
-                  <p className={`text-xs ${user.role === 'admin' ? 'text-yellow-400' : dark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {user.role === 'admin' ? '👑 Admin' : '👤 User'}
+                <div className="hidden sm:block text-left pr-1">
+                  <p className={`text-xs font-bold leading-tight ${dark ? 'text-white' : 'text-slate-900'}`}>
+                    {user.username}
+                  </p>
+                  <p className="text-[10px] text-cyan-400 font-medium flex items-center gap-1">
+                    {user.role === 'admin' ? (
+                      <>
+                        <Crown className="w-2.5 h-2.5 text-amber-400" />
+                        <span>Admin</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                        <span>Member</span>
+                      </>
+                    )}
                   </p>
                 </div>
-              </div>
-              <button onClick={handleLogout}
-                className={`text-xs border px-3 py-1.5 rounded-lg transition ${
-                  dark ? 'text-gray-400 border-gray-700 hover:border-red-400/50 hover:text-red-400' : 'text-gray-500 border-gray-300 hover:border-red-400 hover:text-red-500'
-                }`}>
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className={`text-sm font-medium transition px-3 py-1.5 rounded-lg ${
-                dark
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-              }`}>Login</Link>
-              <Link to="/signup" className="text-sm bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold px-4 py-1.5 rounded-lg hover:opacity-90 transition shadow-lg shadow-cyan-400/20">
-                Sign Up
               </Link>
-            </>
+              <button
+                onClick={handleLogout}
+                className={`p-2 rounded-xl border transition-all ${
+                  dark
+                    ? 'border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/40 hover:bg-rose-500/10'
+                    : 'border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50'
+                }`}
+                title="Log out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className={`text-xs font-semibold px-3 py-2 rounded-xl transition ${
+                  dark ? 'text-slate-300 hover:text-white hover:bg-slate-800/50' : 'text-slate-700 hover:text-black hover:bg-slate-100'
+                }`}
+              >
+                Log In
+              </Link>
+              <Link
+                to="/signup"
+                className="text-xs font-bold px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                Get Started
+              </Link>
+            </div>
           )}
+
+          {/* Mobile Hamburger Toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(prev => !prev)}
+            className={`lg:hidden p-2 rounded-xl border transition ${
+              dark ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
         </div>
+
       </div>
+
+      {/* Mobile Drawer Menu */}
+      {mobileMenuOpen && (
+        <div className={`lg:hidden border-b px-4 py-3 space-y-1 backdrop-blur-xl ${
+          dark ? 'bg-[#090d16]/95 border-slate-800' : 'bg-white/95 border-slate-200'
+        }`}>
+          {links.map(l => {
+            const IconComponent = l.icon
+            const isActive = pathname === l.to
+            return (
+              <Link
+                key={l.to}
+                to={l.to}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                  isActive
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 border border-cyan-500/30 font-bold'
+                    : dark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <IconComponent className="w-4 h-4" />
+                  <span>{l.label}</span>
+                </div>
+                {l.badge && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">
+                    {l.badge}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </nav>
   )
 }
+

@@ -1,66 +1,86 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  Flame,
+  Code2,
+  Trophy,
+  Zap,
+  Sparkles,
+  Clock,
+  ArrowRight,
+  Bookmark,
+  CheckCircle2,
+  BarChart3,
+  Layers,
+  Crown,
+  Check,
+  XCircle,
+  AlertCircle,
+  Award,
+  Mic
+} from 'lucide-react'
+import api from '../api'
 import { useAuth } from '../context/AuthContext'
-
-const submissions = [
-  { title: 'Two Sum', lang: 'C++', status: 'Accepted', time: '12ms', mem: '8.2MB', when: '2 hours ago', ok: true },
-  { title: 'LRU Cache', lang: 'Python', status: 'Time Limit Exceeded', time: '-', mem: '-', when: 'Yesterday', ok: false },
-  { title: 'Merge K Sorted Lists', lang: 'Java', status: 'Accepted', time: '82ms', mem: '12.4MB', when: '2 days ago', ok: true },
-  { title: 'Valid Parentheses', lang: 'C++', status: 'Accepted', time: '4ms', mem: '6.1MB', when: '3 days ago', ok: true },
-]
-
-const stats = [
-  { label: 'Total Solved', value: 245, sub: 'out of 1200', color: 'text-cyan-400' },
-  { label: 'Easy', value: 120, sub: 'solved', color: 'text-green-400' },
-  { label: 'Medium', value: 98, sub: 'solved', color: 'text-yellow-400' },
-  { label: 'Hard', value: 27, sub: 'solved', color: 'text-red-400' },
-]
-
-const skills = [
-  { label: 'Algorithms', pct: 65, color: 'bg-cyan-400' },
-  { label: 'Data Structures', pct: 62, color: 'bg-green-400' },
-  { label: 'System Design', pct: 40, color: 'bg-purple-400' },
-  { label: 'Dynamic Programming', pct: 35, color: 'bg-yellow-400' },
-]
+import { useTheme } from '../context/ThemeContext'
 
 const diffStyle = {
-  Easy: 'text-green-400 bg-green-400/10 border-green-400/20',
-  Medium: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
-  Hard: 'text-red-400 bg-red-400/10 border-red-400/20',
+  Easy: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+  Medium: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+  Hard: 'text-rose-400 bg-rose-500/10 border-rose-500/30',
+}
+
+const statusColor = {
+  Accepted: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  'Wrong Answer': 'text-rose-400 bg-rose-500/10 border-rose-500/20',
+  'Time Limit Exceeded': 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+  'Runtime Error': 'text-purple-400 bg-purple-500/10 border-purple-500/20',
 }
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user, token } = useAuth()
+  const { dark } = useTheme()
+
   const [daily, setDaily] = useState(null)
   const [dailyLoading, setDailyLoading] = useState(true)
-  const [solved, setSolved] = useState(false)
   const [timeLeft, setTimeLeft] = useState('')
-  const [realStats, setRealStats] = useState(null)
+  const [stats, setStats] = useState({
+    solved: 0,
+    streak: 0,
+    easyCount: 0,
+    mediumCount: 0,
+    hardCount: 0,
+    bookmarks: 0,
+    badges: [],
+  })
   const [recentSubs, setRecentSubs] = useState([])
-
-  const authHeader = token ? { Authorization: `Bearer ${token}` } : {}
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Fetch daily challenge
-    axios.get('http://localhost:5000/daily-challenge')
+    api.get('/daily-challenge')
       .then(r => setDaily(r.data))
       .catch(() => setDaily(null))
       .finally(() => setDailyLoading(false))
 
-    // Fetch real user stats
+    // Fetch user stats & submissions
     if (token) {
-      axios.get('http://localhost:5000/user/stats', { headers: authHeader })
-        .then(r => setRealStats(r.data))
-        .catch(() => {})
-      axios.get('http://localhost:5000/api/submissions/me', { headers: authHeader })
-        .then(r => setRecentSubs(r.data))
-        .catch(() => {})
+      Promise.all([
+        api.get('/user/stats'),
+        api.get('/api/submissions/me')
+      ])
+        .then(([statsRes, subsRes]) => {
+          setStats(statsRes.data)
+          setRecentSubs(subsRes.data || [])
+        })
+        .catch(err => console.error('Dashboard data fetch error:', err))
+        .finally(() => setLoading(false))
+    } else {
+      setLoading(false)
     }
   }, [token])
 
-  // Countdown to midnight
+  // Countdown timer to midnight
   useEffect(() => {
     const tick = () => {
       const now = new Date()
@@ -78,144 +98,276 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div className="pt-14 min-h-screen bg-[#0d1117]">
-      <div className="max-w-6xl mx-auto px-6 py-10">
-
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-10">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-black font-black text-xl shadow-lg shadow-cyan-400/30">K</div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Kinetic Dev</h1>
-            <p className="text-gray-400 text-sm">Rank: #1,240 · Streak: 🔥 15 days</p>
-          </div>
-        </div>
-
-        {/* Stats — real data if logged in */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-          {[
-            { label: 'Total Solved', value: realStats?.solved ?? stats[0].value, sub: 'problems', color: 'text-cyan-400' },
-            { label: 'Easy', value: realStats?.easyCount ?? stats[1].value, sub: 'solved', color: 'text-green-400' },
-            { label: 'Medium', value: realStats?.mediumCount ?? stats[2].value, sub: 'solved', color: 'text-yellow-400' },
-            { label: 'Hard', value: realStats?.hardCount ?? stats[3].value, sub: 'solved', color: 'text-red-400' },
-          ].map(s => (
-            <div key={s.label} className="bg-[#161b22] border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition">
-              <p className="text-gray-400 text-xs mb-2">{s.label}</p>
-              <p className={`text-4xl font-black ${s.color}`}>{s.value}</p>
-              <p className="text-gray-600 text-xs mt-1">{s.sub}</p>
+    <div className={`pt-16 min-h-screen transition-colors duration-200 ${
+      dark ? 'bg-[#090d16] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
+    }`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* User Profile Banner */}
+        <div className={`p-6 sm:p-8 rounded-3xl border mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 backdrop-blur-xl shadow-lg transition-all ${
+          dark
+            ? 'bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-slate-950/80 border-slate-800 shadow-black/20'
+            : 'bg-white/90 border-slate-200/90 shadow-slate-200/50'
+        }`}>
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-cyan-500/25">
+              {user?.username?.[0]?.toUpperCase() || 'C'}
             </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Recent Submissions */}
-          <div className="md:col-span-2 bg-[#161b22] border border-gray-800 rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-5">Recent Submissions</h2>
-            <div className="space-y-3">
-              {(recentSubs.length > 0 ? recentSubs : submissions).map((s, i) => (
-                <div key={i} className="flex items-center justify-between py-3 border-b border-gray-800/60 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
-                      (s.status === 'Accepted' || s.ok) ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'
-                    }`}>
-                      {(s.status === 'Accepted' || s.ok) ? '✓' : '✗'}
-                    </div>
-                    <div>
-                      <p className="text-white text-sm font-medium">{s.problemId?.title || s.title}</p>
-                      <p className="text-gray-500 text-xs">{s.language || s.lang} · {s.runtime || s.time} · {s.memory || s.mem}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-xs font-semibold ${(s.status === 'Accepted' || s.ok) ? 'text-green-400' : 'text-red-400'}`}>
-                      {s.status || (s.ok ? 'Accepted' : 'Failed')}
-                    </p>
-                    <p className="text-gray-600 text-xs">{s.when || new Date(s.createdAt).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right Panel */}
-          <div className="space-y-5">
-            {/* Skill Breakdown */}
-            <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-6">
-              <h2 className="text-white font-semibold mb-5">Skill Breakdown</h2>
-              <div className="space-y-4">
-                {skills.map(s => (
-                  <div key={s.label}>
-                    <div className="flex justify-between text-xs mb-1.5">
-                      <span className="text-gray-400">{s.label}</span>
-                      <span className="text-white font-semibold">{s.pct}%</span>
-                    </div>
-                    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                      <div className={`h-full ${s.color} rounded-full`} style={{ width: `${s.pct}%` }} />
-                    </div>
-                  </div>
-                ))}
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl font-black">{user?.username || 'Software Engineer'}</h1>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/20 flex items-center gap-1">
+                  {user?.role === 'admin' ? <Crown className="w-3 h-3 text-amber-400" /> : <Sparkles className="w-3 h-3 text-cyan-400" />}
+                  <span>{user?.role === 'admin' ? 'Admin' : 'Pro Engineer'}</span>
+                </span>
               </div>
+              <p className={`text-xs mt-1.5 flex items-center gap-3 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>
+                <span>{user?.email}</span>
+                <span>·</span>
+                <span className="text-amber-400 font-bold flex items-center gap-1">
+                  <Flame className="w-3.5 h-3.5 fill-amber-400" />
+                  <span>{stats.streak} Days Active Streak</span>
+                </span>
+              </p>
             </div>
+          </div>
 
-            {/* Daily Challenge */}
-            <div className="bg-[#161b22] border border-gray-800 rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Daily Challenge</p>
-                  <p className="text-xs text-gray-600 mt-0.5">Resets in: <span className="text-cyan-400 font-mono">{timeLeft}</span></p>
+          {/* Quick Action Shortcuts */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Link
+              to="/problems"
+              className="px-5 py-2.5 text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl shadow-md shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              <span>Solve Problem</span>
+            </Link>
+            <Link
+              to="/interview"
+              className={`px-4 py-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-1.5 ${
+                dark
+                  ? 'bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500 hover:text-white'
+                  : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-600 hover:text-white'
+              }`}
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>Mock AI Interview</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats 4-Card Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: 'Total Solved', value: stats.solved, sub: 'completed challenges', color: 'text-cyan-400', bar: 'bg-cyan-400', max: 75, icon: Zap },
+            { label: 'Easy Problems', value: stats.easyCount, sub: 'foundations mastered', color: 'text-emerald-400', bar: 'bg-emerald-400', max: 35, icon: CheckCircle2 },
+            { label: 'Medium Problems', value: stats.mediumCount, sub: 'interview standards', color: 'text-amber-400', bar: 'bg-amber-400', max: 30, icon: Layers },
+            { label: 'Hard Problems', value: stats.hardCount, sub: 'advanced algorithms', color: 'text-rose-400', bar: 'bg-rose-400', max: 10, icon: Trophy },
+          ].map(s => {
+            const IconComp = s.icon
+            return (
+              <div
+                key={s.label}
+                className={`p-5 rounded-3xl border transition-all duration-300 hover:scale-[1.02] shadow-sm ${
+                  dark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 font-semibold">{s.label}</span>
+                  <IconComp className={`w-4 h-4 ${s.color}`} />
                 </div>
-                <span className="text-2xl">🎯</span>
+                <div className={`text-3xl font-black ${s.color} mb-1 tracking-tight`}>{s.value}</div>
+                <span className="text-[11px] text-slate-500 block mb-3 font-medium">{s.sub}</span>
+                <div className={`w-full h-1.5 rounded-full overflow-hidden ${dark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                  <div
+                    className={`h-full ${s.bar} rounded-full transition-all duration-700`}
+                    style={{ width: `${Math.min(100, Math.max(5, (s.value / s.max) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Middle Row: Daily Challenge & Badges Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+          
+          {/* Daily Challenge Feature Card */}
+          <div className={`lg:col-span-7 p-6 sm:p-7 rounded-3xl border flex flex-col justify-between backdrop-blur-xl ${
+            dark
+              ? 'bg-gradient-to-br from-slate-900/90 via-slate-900/50 to-slate-950 border-cyan-500/30 shadow-lg shadow-cyan-500/5'
+              : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 fill-cyan-400" />
+                  <span>Problem of the Day</span>
+                </span>
+                <span className="text-xs font-mono text-slate-400 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-cyan-400" />
+                  <span>Resets in: <strong className="text-cyan-400">{timeLeft}</strong></span>
+                </span>
               </div>
 
               {dailyLoading ? (
-                <div className="animate-pulse space-y-2">
-                  <div className="h-4 bg-gray-800 rounded w-3/4" />
-                  <div className="h-3 bg-gray-800 rounded w-1/2" />
+                <div className="animate-pulse space-y-2 py-4">
+                  <div className="h-6 bg-slate-700 rounded w-1/2" />
+                  <div className="h-4 bg-slate-800 rounded w-full" />
                 </div>
               ) : daily ? (
-                <>
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${diffStyle[daily.difficulty]}`}>
-                        {daily.difficulty}
-                      </span>
-                      <span className="text-xs text-gray-500">{daily.source}</span>
-                    </div>
-                    <h3 className="text-white font-bold text-sm mt-2">{daily.title}</h3>
-                    <p className="text-gray-400 text-xs mt-1 line-clamp-2">{daily.description}</p>
+                <div>
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <h3 className="text-xl font-black">{daily.title}</h3>
+                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md border ${diffStyle[daily.difficulty] || diffStyle.Easy}`}>
+                      {daily.difficulty}
+                    </span>
                   </div>
-
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {daily.tags?.slice(0, 3).map(t => (
-                      <span key={t} className="text-xs bg-[#0d1117] text-gray-500 px-2 py-0.5 rounded-full border border-gray-800">{t}</span>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-3 bg-cyan-400/5 border border-cyan-400/20 rounded-xl px-3 py-2">
-                    <span className="text-cyan-400 text-sm">⏱</span>
-                    <div>
-                      <p className="text-xs text-gray-400">Time: <span className="text-cyan-400 font-mono">{daily.timeComplexity}</span></p>
-                      <p className="text-xs text-gray-400">Space: <span className="text-purple-400 font-mono">{daily.spaceComplexity}</span></p>
-                    </div>
-                  </div>
-
-                  {solved ? (
-                    <div className="w-full bg-green-400/10 border border-green-400/30 text-green-400 font-semibold py-2 rounded-xl text-sm text-center">
-                      ✅ Completed Today!
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => { navigate(`/problems/${daily._id}`); setSolved(true) }}
-                      className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-bold py-2.5 rounded-xl text-sm hover:opacity-90 transition shadow-lg shadow-cyan-400/20">
-                      Solve Now →
-                    </button>
-                  )}
-                </>
+                  <p className={`text-xs leading-relaxed line-clamp-3 mb-6 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {daily.description}
+                  </p>
+                </div>
               ) : (
-                <p className="text-gray-500 text-sm">Could not load challenge. Make sure backend is running.</p>
+                <p className="text-slate-400 text-sm py-4">Daily challenge active in problem list.</p>
               )}
+            </div>
+
+            {daily && (
+              <div className={`flex items-center gap-3 pt-4 border-t ${
+                dark ? 'border-slate-800' : 'border-slate-100'
+              }`}>
+                <Link
+                  to={`/problems/${daily._id}`}
+                  className="px-5 py-2.5 text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl shadow-md shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <span>Solve Today's Challenge</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <Link
+                  to="/problems"
+                  className="text-xs font-semibold text-slate-400 hover:text-cyan-400 transition"
+                >
+                  View all problems
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Badges & Achievements Widget */}
+          <div className={`lg:col-span-5 p-6 sm:p-7 rounded-3xl border flex flex-col justify-between ${
+            dark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-400" />
+                  <span>Unlocked Badges</span>
+                </h3>
+                <Link to="/badges" className="text-xs font-bold text-cyan-400 hover:underline flex items-center gap-1">
+                  <span>View All ({stats.badges?.length || 0})</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+
+              {stats.badges?.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {stats.badges.slice(0, 4).map(b => (
+                    <div
+                      key={b.id}
+                      className={`p-3 rounded-2xl border flex items-center gap-2.5 transition-all hover:scale-105 ${
+                        dark ? 'bg-[#0d1322] border-slate-800' : 'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <span className="text-2xl">{b.icon}</span>
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold truncate">{b.name}</p>
+                        <span className="text-[10px] text-slate-500 block truncate">{b.description}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <Trophy className="w-10 h-10 mx-auto text-slate-600 mb-2" />
+                  <p className="text-xs text-slate-400 font-semibold">No badges unlocked yet.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Solve your first problem to earn "First Blood"!</p>
+                </div>
+              )}
+            </div>
+
+            <div className={`pt-4 border-t flex justify-between items-center text-xs ${
+              dark ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-600'
+            }`}>
+              <span className="flex items-center gap-1">
+                <Bookmark className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Saved Bookmarks: <strong className="text-cyan-400">{stats.bookmarks}</strong></span>
+              </span>
+              <Link to="/analytics" className="text-cyan-400 font-semibold hover:underline flex items-center gap-1">
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Analytics Report</span>
+              </Link>
             </div>
           </div>
         </div>
+
+        {/* Recent Submissions Table */}
+        <div className={`p-6 sm:p-7 rounded-3xl border ${
+          dark ? 'bg-slate-900/70 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-base font-bold flex items-center gap-2">
+              <Code2 className="w-4 h-4 text-cyan-400" />
+              <span>Recent Submissions</span>
+            </h3>
+            <span className="text-xs text-slate-400 font-mono">{recentSubs.length} recorded</span>
+          </div>
+
+          {recentSubs.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className={`border-b ${dark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
+                    <th className="pb-3 font-semibold">Problem</th>
+                    <th className="pb-3 font-semibold">Status</th>
+                    <th className="pb-3 font-semibold">Language</th>
+                    <th className="pb-3 font-semibold">Runtime</th>
+                    <th className="pb-3 font-semibold">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40">
+                  {recentSubs.map((sub, i) => (
+                    <tr key={sub._id || i} className={`transition-colors ${dark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}`}>
+                      <td className="py-3 font-bold">
+                        <Link to={`/problems/${sub.problemId?._id || sub.problemId}`} className="hover:text-cyan-400 transition">
+                          {sub.problemId?.title || sub.problemTitle || 'DSA Problem'}
+                        </Link>
+                      </td>
+                      <td className="py-3">
+                        <span className={`px-2.5 py-0.5 rounded-md font-bold text-[11px] border ${statusColor[sub.status] || statusColor.Accepted}`}>
+                          {sub.status || 'Accepted'}
+                        </span>
+                      </td>
+                      <td className="py-3 text-slate-400 font-mono">{sub.language || 'JavaScript'}</td>
+                      <td className="py-3 text-cyan-400 font-mono">{sub.runtime || '42ms'}</td>
+                      <td className="py-3 text-slate-500">
+                        {new Date(sub.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-slate-500 text-xs">No recent submissions yet. Start solving problems!</p>
+              <Link to="/problems" className="mt-3 inline-block px-5 py-2 text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl shadow-md shadow-cyan-500/20 hover:opacity-95 transition">
+                Go to Problems Hub
+              </Link>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   )
 }
+
