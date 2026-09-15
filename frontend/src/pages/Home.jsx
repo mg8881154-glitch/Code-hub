@@ -19,20 +19,6 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
-const codeLines = [
-  { text: 'function twoSum(nums, target) {', color: 'text-cyan-400 font-semibold' },
-  { text: '  const map = new Map();', color: 'text-slate-300' },
-  { text: '  for (let i = 0; i < nums.length; i++) {', color: 'text-slate-300' },
-  { text: '    const comp = target - nums[i];', color: 'text-emerald-400' },
-  { text: '    if (map.has(comp)) {', color: 'text-amber-300' },
-  { text: '      return [map.get(comp), i];', color: 'text-emerald-400 font-bold' },
-  { text: '    }', color: 'text-amber-300' },
-  { text: '    map.set(nums[i], i);', color: 'text-slate-300' },
-  { text: '  }', color: 'text-slate-300' },
-  { text: '}', color: 'text-cyan-400 font-semibold' },
-  { text: '// ✅ Runtime: 48ms (Beats 98.4%)', color: 'text-emerald-400 italic' },
-]
-
 const features = [
   {
     icon: Code2,
@@ -76,7 +62,6 @@ const companies = [
 
 export default function Home() {
   const { dark } = useTheme()
-  const [visibleLines, setVisibleLines] = useState(0)
   const [typed, setTyped] = useState('')
   const fullText = 'Practice Coding. Crack Tech Interviews.'
 
@@ -93,19 +78,6 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    let i = 0
-    const interval = setInterval(() => {
-      if (i < codeLines.length) {
-        setVisibleLines(v => v + 1)
-        i++
-      } else {
-        clearInterval(interval)
-      }
-    }, 180)
-    return () => clearInterval(interval)
-  }, [])
-
   return (
     <div className={`pt-16 min-h-screen transition-colors duration-200 ${
       dark ? 'bg-[#090d16] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
@@ -117,11 +89,11 @@ export default function Home() {
         <div className="absolute top-36 right-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* ── Hero Section ── */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-24">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
             
             {/* Left Hero Column */}
-            <div className="lg:col-span-7 space-y-6">
+            <div className="lg:col-span-6 space-y-6">
               
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm backdrop-blur-md">
@@ -130,7 +102,7 @@ export default function Home() {
               </div>
 
               {/* Bold Heading with Typewriter */}
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12]">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15]">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500">
                   {typed}
                 </span>
@@ -202,72 +174,20 @@ export default function Home() {
 
             </div>
 
-            {/* Right Hero Column: Code Editor Mockup */}
-            <div className="lg:col-span-5 relative mt-6 lg:mt-0">
+            {/* Right Hero Column: User's Featured Banner Graphic */}
+            <div className="lg:col-span-6 relative mt-6 lg:mt-0 group">
+              {/* Glowing ambient background */}
+              <div className="absolute -inset-1.5 bg-gradient-to-r from-cyan-500/30 via-blue-500/25 to-purple-600/30 rounded-3xl blur-xl opacity-70 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               
-              {/* Floating Green Metrics Badge - Top */}
-              <div className="absolute -top-4 -right-2 z-20 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-xl backdrop-blur-md flex items-center gap-1.5 animate-bounce">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Testcases Passed 100%</span>
-              </div>
-
-              {/* Floating AI Complexity Badge - Bottom */}
-              <div className="absolute -bottom-4 -left-2 z-20 px-3.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold shadow-xl backdrop-blur-md flex items-center gap-1.5">
-                <BrainCircuit className="w-3.5 h-3.5 text-cyan-400" />
-                <span>AI Complexity: O(n) Time</span>
-              </div>
-
-              {/* Code Box Container */}
-              <div className={`rounded-2xl border overflow-hidden shadow-2xl transition-all duration-300 ${
-                dark
-                  ? 'bg-[#0b101d] border-slate-800 shadow-cyan-950/30'
-                  : 'bg-slate-900 text-slate-100 border-slate-700 shadow-2xl'
+              {/* Image Container Card */}
+              <div className={`relative rounded-3xl border overflow-hidden shadow-2xl transition-all duration-300 ${
+                dark ? 'border-slate-700/80 bg-slate-900/90 shadow-cyan-950/40' : 'border-slate-200 bg-white shadow-xl'
               }`}>
-                
-                {/* Editor Header Bar */}
-                <div className="flex items-center justify-between px-4 py-3 bg-[#070a12] border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                    <span className="ml-2 text-xs font-mono text-slate-400 font-medium">twoSum.js</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold">
-                      JavaScript (Node.js)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Editor Body */}
-                <div className="p-4 sm:p-5 font-mono text-[11px] sm:text-xs leading-6 overflow-x-auto min-h-[280px]">
-                  {codeLines.slice(0, visibleLines).map((line, i) => (
-                    <div key={i} className={`flex items-start ${line.color} whitespace-pre`}>
-                      <span className="text-slate-600 select-none mr-3 sm:mr-4 font-mono w-4 text-right flex-shrink-0">
-                        {i + 1}
-                      </span>
-                      <span>{line.text}</span>
-                    </div>
-                  ))}
-                  {visibleLines < codeLines.length && (
-                    <span className="animate-pulse text-cyan-400 inline-block ml-7">▋</span>
-                  )}
-                </div>
-
-                {/* Editor Bottom Telemetry Metrics Bar */}
-                <div className="flex flex-wrap items-center justify-between px-4 py-3 bg-[#070a12] border-t border-slate-800 text-xs gap-2">
-                  <div className="flex items-center gap-3 font-mono">
-                    <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                      <Zap className="w-3.5 h-3.5 fill-current" />
-                      <span>Runtime: 48ms (Beats 98.4%)</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-cyan-400 font-mono text-[11px]">
-                    <Cpu className="w-3.5 h-3.5" />
-                    <span>Memory: 42.1 MB</span>
-                  </div>
-                </div>
-
+                <img
+                  src="/hero-banner.png"
+                  alt="CodeHub - Sharpen Your Skills One Problem at a Time"
+                  className="w-full h-auto object-cover rounded-3xl transform group-hover:scale-[1.02] transition-transform duration-500"
+                />
               </div>
             </div>
 
